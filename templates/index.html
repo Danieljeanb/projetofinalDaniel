@@ -2,16 +2,118 @@
 
 {% block conteudo %}
 
-<h1 style="text-align: center;">Pagina de Cadastro</h1>
-<h2>Daniel</h2>
- <div class="container">
-    <h2>Cadastro</h2>
-    <form>
-      <input type="text" placeholder="Nome completo" required>
-      <input type="email" placeholder="E-mail" required>
-      <input type="password" placeholder="Senha" required>
-      <input type="password" placeholder="Confirmar senha" required>
-      <button type="submit">Cadastrar</button>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dev Full Stack Web</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          background-color: #f4f4f4;
+        }
+        header {
+          background-color: #0a2b86;
+          color: white;
+          padding: 20px;
+          text-align: center;
+          font-family:'Times New Roman', Times, serif;
+        }
+        nav {
+          background-color: #333;
+          padding: 10px;
+          font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+        nav ul {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          justify-content: center;
+        }
+        nav ul li {
+          margin: 0 15px;
+        }
+        nav ul li a {
+          color: rgb(255, 255, 255);
+          text-decoration: none;
+          font-weight: bold;
+        }
+        nav ul li a:hover {
+          text-decoration: underline;
+        }
+        article, section {
+          font-family:'Times New Roman', Times, serif;
+          padding: 20px;
+          background: white;
+          margin: 20px;
+          border-radius: 8px;
+          box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        article {
+          text-align: center;
+        }
+        footer {
+          text-align: center;
+          padding: 15px;
+          background: #333;
+          color: white;
+        }
+    </style>
+</head>
+<body>
+    
+    <header>
+      <h1>SISTEMA DE ORDENS DE SERVIÇO</h1>
+    </header>
+
+    <nav class="col-row10">
+      <ul>
+        <li><a href="/templates/cadastrodecliente.html">Cadastrar Cliente</a></li>
+        <li><a href="/templates/cadastrodeveiculos.html">Cadastrar Veiculos</a></li>
+        <li><a href="/templates/item.html">Controle De Estoque</a></li>
+        <li><a href="/templates/gerenciarmecanicos.html">Cadastrar Mecanico</a></li>
+         <li><a href="/templates/item.html"></a></li>
+        <li><a href="/templates/pagamento.html"></a>Pagamento</li>
+        <li><a href="/templates/relatórios.html"></a>Relatórios</li>
+
+
+      </ul>
+    </nav>
+
+    <main>
+        <article id="artigo">
+          <p><b>O que um Dev Full Stack faz?</b></p>
+          <p>Um desenvolvedor full stack é aquele que desenvolve aplicações e softwares completos, desde o back-end até o front-end. Isto quer dizer que ele domina tanto as linguagens de programação quanto as tecnologias web, criando aplicações do zero e também integrando-as com outras ferramentas existentes.</p>
+          <p>Além disso, o dev full stack pode ter conhecimentos em banco de dados.</p>
+        </article>
+
+        
+        
+        <section id="lista">
+            <h3>Setores em que pode atuar na programação</h3>
+            <ul>
+                <li><strong>Desenvolvimento ponta a ponta:</strong> Participar de todas as etapas de um projeto, desde o planejamento e a criação da interface até a configuração do banco de dados e a implementação da lógica de negócios.</li>
+                <li><strong>Front-end:</strong> Construir a interface do usuário, garantindo que o site ou aplicativo seja responsivo e visualmente agradável, utilizando HTML, CSS e JavaScript.</li>
+                <li><strong>Back-end:</strong> Desenvolver a lógica do lado do servidor, incluindo a criação de APIs, a comunicação com o banco de dados e a implementação de medidas de segurança.</li>
+                <li><strong>Bancos de dados:</strong> Gerenciar e configurar bancos de dados, seja SQL ou NoSQL.</li>
+                <li><strong>Colaboração:</strong> Trabalhar em equipe utilizando metodologias ágeis e ferramentas de controle de versão como o Git para gerenciar o código.</li>
+                <li><strong>Manutenção e atualizações:</strong> Corrigir erros e manter os sistemas atualizados para garantir seu bom funcionamento.</li>
+            </ul>
+        </section>
+    </main>
+
+    <section id="contato">
+      <h2>Contato</h2>
+      <p>Você pode me encontrar através do e-mail: <a href="mailto:DanielJeanTech@gmail.com">DanielJeanTech@gmail.com</a></p>
+    </section>
+
+    <footer>
+      <p>&copy; 2025 DanielJeanTech - Todos os direitos reservados</p>
+    </footer>
+</body>
+</html>
 
 
 {% endblock %}

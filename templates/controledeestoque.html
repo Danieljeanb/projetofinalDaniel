@@ -1,0 +1,45 @@
+{% extends 'base.html'%}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro de Peças</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        form { margin-bottom: 20px; }
+        label { display: block; margin-top: 10px; }
+        input { padding: 5px; width: 250px; }
+        button { margin-top: 15px; padding: 8px 15px; }
+        .aviso { color: red; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Cadastro de Peças</h1>
+    <form method="post">
+        <label>Código:</label>
+        <input type="text" name="codigo" required>
+
+        <label>Nome da peça:</label>
+        <input type="text" name="nome" required>
+
+        <label>Quantidade em estoque:</label>
+        <input type="number" name="quantidade" min="0" required>
+
+        <label>Custo:</label>
+        <input type="number" step="0.01" name="custo" required>
+
+        <label>Preço de venda:</label>
+        <input type="number" step="0.01" name="preco_venda" required>
+
+        <button type="submit">Cadastrar Peça</button>
+    </form>
+
+    {% if aviso %}
+        <div class="aviso">{{ aviso }}</div>
+    {% endif %}
+</body>
+</html>
+
+
+{% block conteudo %}

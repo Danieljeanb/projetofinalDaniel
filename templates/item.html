@@ -1,0 +1,27 @@
+{% extends 'base.html'%}
+
+<h2>Gerenciar Itens da OS</h2>
+
+<h3>Peças utilizadas</h3>
+<form method="post" action="/adicionar_item_os">
+  <label>Descrição da peça:</label>
+  <input type="text" name="descricao">
+  <label>Quantidade:</label>
+  <input type="number" name="quantidade">
+  <label>Valor unitário:</label>
+  <input type="text" name="valor_unitario">
+  <button type="submit">Adicionar</button>
+</form>
+
+<h3>Serviços executados</h3>
+<form method="post" action="/adicionar_servico_os">
+  <label>Descrição do serviço:</label>
+  <input type="text" name="descricao">
+  <label>Horas:</label>
+  <input type="number" step="0.1" name="horas">
+  <label>Valor por hora:</label>
+  <input type="text" name="valor_hora">
+  <button type="submit">Adicionar</button>
+</form> 
+
+{% block conteudo %}

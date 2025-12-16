@@ -1,0 +1,30 @@
+{% extends 'base.html'%}
+
+<h1>Ordens de Serviço Concluídas no Mês</h1>
+<ul>
+    {% for os in ordens %}
+        <li>OS {{ os.id }} - Cliente: {{ os.cliente }} - Veículo: {{ os.veiculo }} - Data: {{ os.data_abertura.strftime('%d/%m/%Y') }}</li>
+    {% endfor %}
+</ul>
+
+<h1>Peças com Estoque Baixo</h1>
+<ul>
+    {% for peca in pecas %}
+        <li>{{ peca.nome }} (Código: {{ peca.codigo }}) - Restam {{ peca.quantidade }} unidades</li>
+    {% endfor %}
+</ul>
+
+<h1>Relatório de Faturamento</h1>
+<form method="post">
+    <label>Data início:</label>
+    <input type="date" name="inicio" required>
+    <label>Data fim:</label>
+    <input type="date" name="fim" required>
+    <button type="submit">Gerar Relatório</button>
+</form>
+
+{% if valor_total is not none %}
+    <h2>Valor total faturado: R$ {{ "%.2f"|format(valor_total) }}</h2>
+{% endif %}
+
+{% block conteudo %}

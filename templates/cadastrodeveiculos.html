@@ -1,0 +1,27 @@
+{% extends 'base.html'%}
+
+
+<main>
+  <h1>Cadastro de veiculo</h1>
+
+    <fieldset>
+      <legend>Veículos</legend>
+      <div id="veiculos">
+        <div class="veiculo">
+          <label for="veiculo_modelo_1">Modelo:</label>
+          <input type="text" id="veiculo_modelo_1" name="veiculos[0][modelo]" required>
+          <label for="veiculo_placa_1" style="margin-left: 10px;">Placa:</label>
+          <input type="text" id="veiculo_placa_1" name="veiculos[0][placa]" required>
+          <label for="veiculo_ano_1" style="margin-left: 10px;">Ano:</label>
+          <input type="number" id="veiculo_ano_1" name="veiculos[0][ano]" min="1900" max="2099" step="1" required>
+        </div>
+      </div>
+      <button type="button" onclick="adicionarVeiculo()">Adicionar outro veículo</button>
+    </fieldset>
+    
+    <br>
+    <button type="submit">Salvar Cadastro</button>
+  </form>
+</main>
+
+{% block conteudo %}

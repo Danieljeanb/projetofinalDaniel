@@ -1,0 +1,39 @@
+{% extends 'base.html'%}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Criar Nova OS</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        label { display: block; margin-top: 10px; }
+        input, textarea { width: 300px; padding: 5px; }
+        button { margin-top: 15px; padding: 8px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Criar Nova Ordem de Serviço</h1>
+    <form method="post">
+        <label>Cliente:</label>
+        <input type="text" name="cliente" required>
+
+        <label>Veículo:</label>
+        <input type="text" name="veiculo" required>
+
+        <label>Problema relatado:</label>
+        <textarea name="problema" required></textarea>
+
+        <label>Mecânico designado:</label>
+        <input type="text" name="mecanico">
+
+        <label>Observações:</label>
+        <textarea name="observacoes"></textarea>
+
+        <button type="submit">Criar OS</button>
+    </form>
+</body>
+</html>
+
+
+{% block conteudo %}

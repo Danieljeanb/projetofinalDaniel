@@ -1,0 +1,172 @@
+{% extends 'base.html'%}
+
+<style>
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+header h1 {
+  text-align: center;
+  color: #2c3e50;
+}
+
+section {
+  margin-bottom: 30px;
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+h2 {
+  color: #34495e;
+  margin-bottom: 15px;
+}
+
+form fieldset {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 15px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input, select {
+  padding: 8px;
+  margin-top: 5px;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  background-color: #3498db;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+.tabela-mecanicos {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.tabela-mecanicos th, .tabela-mecanicos td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+}
+
+.tabela-mecanicos th {
+  background-color: #3498db;
+  color: white;
+}
+
+.tabela-mecanicos tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+</style>
+
+
+    <header>
+      <h1>Gerenciar Mecânicos</h1>
+    </header>
+  
+    <!-- Formulário de cadastro -->
+    <section>
+      <h2>Cadastrar novo mecânico</h2>
+      <form method="post" action="/cadastrar_mecanico">
+        <fieldset>
+          <legend>Dados do Mecânico</legend>
+  
+          <label for="nome_mecanico">Nome:</label>
+          <input type="text" id="nome_mecanico" name="nome" required>
+  
+          <br><br>
+  
+          <label for="especialidade_mecanico">Especialidade (opcional):</label>
+          <input type="text" id="especialidade_mecanico" name="especialidade">
+        </fieldset>
+  
+        <br>
+        <button type="submit">Salvar Mecânico</button>
+      </form>
+    </section>
+  
+    <!-- Lista de mecânicos -->
+    <section>
+      <h2>Lista de Mecânicos</h2>
+      <table class="tabela-mecanicos">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Especialidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if mecanicos %}
+            {% for mecanico in mecanicos %}
+            <tr>
+              <td>{{ mecanico.nome }}</td>
+              <td>{{ mecanico.especialidade if mecanico.especialidade else '---' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="2"><em>Nenhum mecânico cadastrado.</em></td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </section>
+  
+    <!-- Atribuição de OS -->
+    <section>
+      <h2>Atribuir Ordem de Serviço a um Mecânico</h2>
+      <form method="post" action="/atribuir_os">
+        <fieldset>
+          <legend>Atribuição</legend>
+  
+          <label for="os_id">Ordem de Serviço:</label>
+          <select id="os_id" name="os_id" required>
+            <option value="">Selecione a OS</option>
+            {% for os in ordens_servico %}
+              <option value="{{ os.id }}">{{ os.descricao }}</option>
+            {% endfor %}
+          </select>
+  
+          <br><br>
+  
+          <label for="mecanico_id">Mecânico:</label>
+          <select id="mecanico_id" name="mecanico_id" required>
+            <option value="">Selecione o mecânico</option>
+            {% for mecanico in mecanicos %}
+              <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
+            {% endfor %}
+          </select>
+  
+          <br><br>
+          <button type="submit">Atribuir</button>
+        </fieldset>
+      </form>
+    </section>
+  </main>
+
+
+
+{% block conteudo %}
