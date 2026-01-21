@@ -1,0 +1,28 @@
+{% extends 'base.html'%}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Entrando no Sistema...</title>
+    <link rel="stylesheet" href="../area de cadastro/style.css">
+</head>
+<body class="success-body">
+    <div class="success-page">
+        <div class="dashboard-preview">
+            <div class="user-icon">👤</div>
+            <h2>Autenticando...</h2>
+            <p>João, estamos preparando sua oficina. Aguarde um instante.</p>
+            <div class="loader-line"></div>
+        </div>
+    </div>
+
+    <script>
+        // Lógica de redirecionamento automático
+        // 3000ms = 3 segundos de espera
+        setTimeout(function() {
+            window.location.href = "../area de cadastro/base.html";
+        }, 3000);
+    </script>
+</body>
+</html>
+{% extends 'base.html'%}
