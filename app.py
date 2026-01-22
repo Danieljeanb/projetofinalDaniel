@@ -20,7 +20,6 @@ def conectar_banco():
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '1234')
 
-conectar_banco()
 
 load_dotenv()
 
