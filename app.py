@@ -1,9 +1,26 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 app.secret_key = 'chave_minha_oficina_2025'
+
+load_dotenv()
+
+def conectar_banco():
+    return MySQLdb.connect(
+        host=os.getenv('DB_HOST', 'localhost'),
+        user=os.getenv('DB_USER', 'root'),      
+        password=os.getenv('DB_PASSWORD', ''),
+        db=os.getenv('DB_NAME', 'minha_oficina')
+    )  
+
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', '1234')
+
+load_dotenv()
 
 # CONFIGURAÇÃO BANCO
 app.config['MYSQL_HOST'] = 'localhost'
@@ -15,55 +32,62 @@ mysql = MySQL(app)
 
 # ------------------- AUTENTICAÇÃO -------------------
 
-@app.route('/cadastro')
+# @app.route('/cadastro')
+# def cadastro():
+#     return render_template('cadastro.html')
+
+@app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        senha = request.form['senha']
+
+        cursor = mysql.connection.cursor()
+        cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
+        user = cursor.fetchone()
+
+        if user:
+            flash('Este e-mail já está cadastrado!', 'danger')
+            return redirect(url_for('cadastro'))
+
+        cursor.execute(
+            'INSERT INTO usuarios (nome, email, senha) VALUES (%s,%s,%s)',
+            (nome, email, senha)
+        )
+        mysql.connection.commit()
+        flash('Usuário registrado com sucesso!', 'success')
+        return redirect(url_for('login'))
+
+    # Se for GET, apenas renderiza o formulário
     return render_template('cadastro.html')
 
-@app.route('/login')
+
+    # Se for GET, apenas renderiza o formulário
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        if not request.form or 'email' not in request.form or 'senha' not in request.form:
+            flash('Por favor, preencha todos os campos!', 'danger')
+            return redirect(url_for('login'))
+
+        email = request.form['email']
+        senha = request.form['senha']
+
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM usuarios WHERE email = %s AND senha = %s', (email, senha))
+        user = cursor.fetchone()
+
+        if user:
+            flash('Login realizado com sucesso!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('E-mail ou senha inválidos!', 'danger')
+            return redirect(url_for('login'))
+
+    # Se for GET, apenas renderiza a página de login
     return render_template('login.html')
-
-@app.route('/registrar_usuario', methods=['POST'])
-def registrar_usuario():
-    nome = request.form['nome']
-    email = request.form['email']
-    senha = request.form['senha']
-
-    cursor = mysql.connection.cursor()
-    cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
-    user = cursor.fetchone()
-
-    if user:
-        flash('Este e-mail já está cadastrado!', 'danger')
-        return redirect(url_for('cadastro'))
-
-    cursor.execute(
-        'INSERT INTO usuarios (nome, email, senha) VALUES (%s,%s,%s)',
-        (nome, email, senha)
-    )
-    mysql.connection.commit()
-    flash('Usuário registrado com sucesso!', 'success')
-    return redirect(url_for('login'))
-
-@app.route('/login_usuario', methods=['POST'])
-def login_usuario():
-    if not request.form or 'email' not in request.form or 'senha' not in request.form:
-        flash('Por favor, preencha todos os campos!', 'danger')
-        return redirect(url_for('login'))
-    email = request.form['email']
-    senha = request.form['senha']
-
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM usuarios WHERE email = %s AND senha = %s', (email, senha))
-    user = cursor.fetchone()
-
-    if user:
-        flash('Login realizado com sucesso!', 'success')
-        return redirect(url_for('dashboard'))
-    else:
-        flash('E-mail ou senha inválidos!', 'danger')
-        return redirect(url_for('login'))
-
 # ------------------- PÁGINAS PRINCIPAIS -------------------
 
 @app.route('/')
