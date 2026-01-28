@@ -1,50 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_mysqldb import MySQL
-import MySQLdb.cursors
+# from flask_mysqldb import MySQL
+import mysql.connector as mysql
 from dotenv import load_dotenv
 import os
 
+# ------------------- CONFIGURAÇÃO APP -------------------
 app = Flask(__name__)
-app.secret_key = 'chave_minha_oficina_2025'
-
 load_dotenv()
 
-def conectar_banco():
-    return MySQLdb.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        user=os.getenv('DB_USER', 'root'),      
-        password=os.getenv('DB_PASSWORD', ''),
-        db=os.getenv('DB_NAME', 'minha_oficina'),
-    )
-
-app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', '1234')
 
+# ------------------- CONFIGURAÇÃO BANCO -------------------
+def conectar_banco():
+    return mysql.connect(
+        host=os.getenv('DB_HOST', 'localhost'),
+        user=os.getenv('DB_USER', 'root'),
+        password=os.getenv('DB_PASSWORD', ''),
+        database=os.getenv('DB_NAME', 'minha_oficina'),
+        auth_plugin="mysql_native_password"
+    )
 
-load_dotenv()
+# mysql = MySQL(app)
+# app.config['MYSQL_HOST'] = os.getenv('DB_HOST', 'localhost')
+# app.config['MYSQL_USER'] = os.getenv('DB_USER', 'root')
+# app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD', '')
+# app.config['MYSQL_DB'] = os.getenv('DB_NAME', 'minha_oficina')
 
-# # CONFIGURAÇÃO BANCO
-# app.config['MYSQL_HOST'] = 'localhost'
-# app.config['MYSQL_USER'] = 'root'
-# app.config['MYSQL_PASSWORD'] = ''
-# app.config['MYSQL_DB'] = 'minha_oficina'
-
-mysql = MySQL(app)
 
 # ------------------- AUTENTICAÇÃO -------------------
-
-# @app.route('/cadastro')
-# def cadastro():
-#     return render_template('cadastro.html')
-
-@app.route('/cadastro', methods=['GET', 'POST'])
+@app.route('/cadastrar', methods=['GET', 'POST'])
 def cadastro():
     if request.method == 'POST':
         nome = request.form['nome']
         email = request.form['email']
         senha = request.form['senha']
 
-        cursor = mysql.connection.cursor()
+        cursor = mysql.connection.cursor()       
         cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
         user = cursor.fetchone()
 
@@ -53,44 +44,32 @@ def cadastro():
             return redirect(url_for('cadastro'))
 
         cursor.execute(
-            'INSERT INTO usuarios (nome, email, senha) VALUES (%s,%s,%s)',
+            'INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s,%s,%s)',
             (nome, email, senha)
         )
         mysql.connection.commit()
-        flash('Usuário registrado com sucesso!', 'success')
+        flash('Usuário registrado com sucesso!', 'success') 
         return redirect(url_for('login'))
 
-    # Se for GET, apenas renderiza o formulário
     return render_template('cadastro.html')
 
 
-    # Se for GET, apenas renderiza o formulário
-
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST', 'GET'])
 def login():
     if request.method == 'POST':
-        if not request.form or 'email' not in request.form or 'senha' not in request.form:
-            flash('Por favor, preencha todos os campos!', 'danger')
-            return redirect(url_for('login'))
+        email = request.form.get('email')
+        senha = request.form.get('senha')
 
-        email = request.form['email']
-        senha = request.form['senha']
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        sql = "SELECT * FROM usuarios WHERE email = %s"
 
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM usuarios WHERE email = %s AND senha = %s', (email, senha))
-        user = cursor.fetchone()
+        cursor.execute(sql, (email,))
+        usuario = cursor.fetchone()
 
-        if user:
-            flash('Login realizado com sucesso!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('E-mail ou senha inválidos!', 'danger')
-            return redirect(url_for('login'))
-
-    # Se for GET, apenas renderiza a página de login
     return render_template('login.html')
-# ------------------- PÁGINAS PRINCIPAIS -------------------
 
+# ------------------- PÁGINAS PRINCIPAIS -------------------
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -100,12 +79,13 @@ def dashboard():
     return render_template('base.html')
 
 # ------------------- CLIENTES -------------------
-
 @app.route('/clientes')
 def clientes():
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = mysql.connection.cursor()
+
     cursor.execute('SELECT * FROM clientes ORDER BY nome ASC')
     lista = cursor.fetchall()
+    cursor.close()
     return render_template('clientes.html', clientes=lista)
 
 @app.route('/add_cliente', methods=['POST'])
@@ -128,7 +108,6 @@ def deletar_cliente(id):
     return redirect(url_for('clientes'))
 
 # ------------------- VEÍCULOS -------------------
-
 @app.route('/veiculos')
 def veiculos():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -158,7 +137,6 @@ def deletar_veiculo(id):
     return redirect(url_for('veiculos'))
 
 # ------------------- SERVIÇOS -------------------
-
 @app.route('/servicos')
 def servicos():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -190,7 +168,6 @@ def deletar_os(id):
     return redirect(url_for('servicos'))
 
 # ------------------- ESTOQUE -------------------
-
 @app.route('/estoque')
 def estoque():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -210,6 +187,5 @@ def add_estoque():
     return redirect(url_for('estoque'))
 
 # ------------------- MAIN -------------------
-
 if __name__ == '__main__':
     app.run(debug=True)
