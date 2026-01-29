@@ -35,7 +35,8 @@ def cadastro():
         email = request.form['email']
         senha = request.form['senha']
 
-        cursor = mysql.connection.cursor()       
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)      
         cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
         user = cursor.fetchone()
 
@@ -110,7 +111,8 @@ def deletar_cliente(id):
 # ------------------- VEÍCULOS -------------------
 @app.route('/veiculos')
 def veiculos():
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
     cursor.execute('SELECT v.*, c.nome as dono FROM veiculos v JOIN clientes c ON v.cliente_id = c.id')
     v_lista = cursor.fetchall()
     cursor.execute('SELECT id, nome FROM clientes')
@@ -139,7 +141,8 @@ def deletar_veiculo(id):
 # ------------------- SERVIÇOS -------------------
 @app.route('/servicos')
 def servicos():
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
     cursor.execute('SELECT os.*, c.nome as c_nome, v.modelo as v_mod FROM ordens_servico os JOIN clientes c ON os.cliente_id = c.id JOIN veiculos v ON os.veiculo_id = v.id')
     oss = cursor.fetchall()
     cursor.execute('SELECT id, nome FROM clientes')
@@ -170,7 +173,8 @@ def deletar_os(id):
 # ------------------- ESTOQUE -------------------
 @app.route('/estoque')
 def estoque():
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
     cursor.execute('SELECT * FROM estoque')
     items = cursor.fetchall()
     return render_template('estoque.html', estoque=items)
