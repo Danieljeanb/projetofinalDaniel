@@ -1,5 +1,7 @@
 {% extends 'base.html'%}
 
+{% block conteudo %} <!-- MOVIDO PARA ENVOLVER TUDO -->
+
 <h1>Ordens de Serviço Concluídas no Mês</h1>
 <ul>
     {% for os in ordens %}
@@ -27,4 +29,4 @@
     <h2>Valor total faturado: R$ {{ "%.2f"|format(valor_total) }}</h2>
 {% endif %}
 
-{% block conteudo %}
+{% endblock %} <!-- O FECHAMENTO PERMANECE AQUI NO FINAL -->

@@ -36,14 +36,13 @@ CREATE TABLE veiculos (
 );
 
 -- 4. Ordens de Serviço
-DROP TABLE IF EXISTS ordens_servico;
-CREATE TABLE ordens_servico (
+CREATE TABLE IF NOT EXISTS ordens_servico (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     veiculo_id INT NOT NULL,
     descricao TEXT,
-    valor DECIMAL(10,2) DEFAULT 0.00,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    valor DECIMAL(10, 2),
+    data_abertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (veiculo_id) REFERENCES veiculos(id)
 );

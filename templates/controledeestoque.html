@@ -1,45 +1,72 @@
-{% extends 'base.html'%}
+{% extends 'base.html' %}
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastro de Peças</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        form { margin-bottom: 20px; }
-        label { display: block; margin-top: 10px; }
-        input { padding: 5px; width: 250px; }
-        button { margin-top: 15px; padding: 8px 15px; }
-        .aviso { color: red; font-weight: bold; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Cadastro de Peças</h1>
-    <form method="post">
-        <label>Código:</label>
-        <input type="text" name="codigo" required>
+{% block conteudo %}
+<style>
+    .estoque-container { padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .form-estoque label { display: block; margin-top: 10px; font-weight: bold; }
+    .form-estoque input { padding: 8px; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 4px; }
+    .btn-estoque { margin-top: 15px; padding: 10px 20px; background-color: #000; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-estoque:hover { background-color: #333; }
+    .aviso { color: red; font-weight: bold; margin-top: 20px; }
+</style>
 
+<div class="estoque-container">
+    <h1 class="fw-bold text-uppercase mb-4">📦 Cadastro de Peças</h1>
+    
+    <form method="POST" action="{{ url_for('add_estoque') }}" class="form-estoque">
         <label>Nome da peça:</label>
-        <input type="text" name="nome" required>
+        <input type="text" name="peca" placeholder="Ex: Pastilha de Freio" required>
 
         <label>Quantidade em estoque:</label>
-        <input type="number" name="quantidade" min="0" required>
+        <input type="number" name="quantidade" min="0" placeholder="0" required>
 
-        <label>Custo:</label>
-        <input type="number" step="0.01" name="custo" required>
+        <!-- Se o seu banco tiver colunas de custo e preço, mantenha estes; 
+             caso contrário, remova para não dar erro no INSERT do Python -->
+        <label>Custo (R$):</label>
+        <input type="number" step="0.01" name="custo" placeholder="0.00">
 
-        <label>Preço de venda:</label>
-        <input type="number" step="0.01" name="preco_venda" required>
+        <label>Preço de venda (R$):</label>
+        <input type="number" step="0.01" name="preco_venda" placeholder="0.00">
 
-        <button type="submit">Cadastrar Peça</button>
+        <button type="submit" class="btn-estoque">Cadastrar Peça no Estoque</button>
     </form>
 
     {% if aviso %}
         <div class="aviso">{{ aviso }}</div>
     {% endif %}
-</body>
-</html>
 
+    <hr class="my-5">
 
-{% block conteudo %}
+    <h2 class="fw-bold text-uppercase mb-3">Itens em Estoque</h2>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Peça</th>
+                    <th>Quantidade</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in estoque %}
+                <tr>
+                    <td>{{ item.peca }}</td>
+                    <td>{{ item.quantidade }}</td>
+                    <td>
+                        {% if item.quantidade <= 5 %}
+                            <span class="badge bg-danger">Estoque Baixo</span>
+                        {% else %}
+                            <span class="badge bg-success">Ok</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">Nenhum item cadastrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

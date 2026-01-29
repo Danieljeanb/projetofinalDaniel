@@ -35,20 +35,28 @@ def cadastro():
         email = request.form['email']
         senha = request.form['senha']
 
-        conexao = conectar_banco()
+        conexao = conectar_banco() # Abre conexão
         cursor = conexao.cursor(dictionary=True)      
+        
         cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
         user = cursor.fetchone()
 
         if user:
+            cursor.close()
+            conexao.close()
             flash('Este e-mail já está cadastrado!', 'danger')
             return redirect(url_for('cadastro'))
 
+        # Note que usei 'senha_hash' para bater com o SQL acima
         cursor.execute(
             'INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s,%s,%s)',
             (nome, email, senha)
         )
-        mysql.connection.commit()
+        conexao.commit() # Salva no banco usando a conexao aberta
+        
+        cursor.close()
+        conexao.close() # Sempre feche
+        
         flash('Usuário registrado com sucesso!', 'success') 
         return redirect(url_for('login'))
 
@@ -56,17 +64,29 @@ def cadastro():
 
 
 @app.route('/login', methods=['POST', 'GET'])
-def login():
+def login_usuario():
     if request.method == 'POST':
         email = request.form.get('email')
         senha = request.form.get('senha')
 
         conexao = conectar_banco()
         cursor = conexao.cursor(dictionary=True)
-        sql = "SELECT * FROM usuarios WHERE email = %s"
+        
+        try:
+            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+            usuario = cursor.fetchone()
 
-        cursor.execute(sql, (email,))
-        usuario = cursor.fetchone()
+            # Verifica se usuário existe e se a senha coincide
+            if usuario and usuario['senha_hash'] == senha:
+                # Aqui você pode adicionar session['user_id'] = usuario['id'] futuramente
+                flash(f'Bem-vindo, {usuario["nome"]}!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('E-mail ou senha incorretos!', 'danger')
+                
+        finally:
+            cursor.close()
+            conexao.close()
 
     return render_template('login.html')
 
@@ -77,58 +97,125 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template('base.html')
+    # Se quiser passar dados dinâmicos para os cards, faça aqui
+    return render_template('dashboard.html')
+
 
 # ------------------- CLIENTES -------------------
 @app.route('/clientes')
 def clientes():
-    cursor = mysql.connection.cursor()
-
-    cursor.execute('SELECT * FROM clientes ORDER BY nome ASC')
-    lista = cursor.fetchall()
-    cursor.close()
-    return render_template('clientes.html', clientes=lista)
-
+    conexao = conectar_banco() # ESSENCIAL: Abrir a conexão antes de tudo
+    cursor = conexao.cursor(dictionary=True) # dictionary=True para usar o.nome no HTML
+    
+    try:
+        cursor.execute('SELECT * FROM clientes ORDER BY nome ASC')
+        lista = cursor.fetchall()
+        return render_template('clientes.html', clientes=lista)
+    
+    except Exception as e:
+        return f"Erro no banco: {e}"
+        
+    finally:
+        # ESSENCIAL: Fechar sempre para não travar o MySQL
+        cursor.close()
+        conexao.close()
 @app.route('/add_cliente', methods=['POST'])
 def add_cliente():
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        'INSERT INTO clientes (nome, telefone, documento, email, endereco) VALUES (%s,%s,%s,%s,%s)',
-        (request.form['nome'], request.form['tel'], request.form['doc'], request.form['email'], request.form['end'])
-    )
-    mysql.connection.commit()
-    flash('Cliente cadastrado!', 'success')
-    return redirect(url_for('clientes'))
+    # 1. Abre a conexão e o cursor
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    try:
+        # 2. Executa o comando
+        cursor.execute(
+            'INSERT INTO clientes (nome, telefone, documento, email, endereco) VALUES (%s,%s,%s,%s,%s)',
+            (
+                request.form['nome'], 
+                request.form['tel'], 
+                request.form['doc'], 
+                request.form['email'], 
+                request.form['end']
+            )
+        )
+        # 3. Salva as alterações (ESSENCIAL)
+        conexao.commit()
+        flash('Cliente cadastrado!', 'success')
+    except Exception as e:
+        flash(f'Erro ao cadastrar: {e}', 'danger')
+    finally:
+        # 4. Fecha tudo para liberar o banco (OBRIGATÓRIO no PythonAnywhere)
+        cursor.close()
+        conexao.close()
+
+    return redirect(url_for('clientes.html'))
+
 
 @app.route('/deletar_cliente/<int:id>')
 def deletar_cliente(id):
-    cursor = mysql.connection.cursor()
-    cursor.execute('DELETE FROM clientes WHERE id = %s', (id,))
-    mysql.connection.commit()
-    flash('Cliente e dados vinculados removidos!', 'danger')
+    # 1. Usar sua função de conexão
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    
+    try:
+        # 2. Executar a deleção
+        cursor.execute('DELETE FROM clientes WHERE id = %s', (id,))
+        
+        # 3. Salvar a alteração (COMMIT)
+        conexao.commit()
+        
+        flash('Cliente e dados vinculados removidos!', 'danger')
+    except Exception as e:
+        flash(f'Erro ao remover: {e}', 'warning')
+    finally:
+        # 4. Fechar conexão (OBRIGATÓRIO para não travar o PythonAnywhere)
+        cursor.close()
+        conexao.close()
+        
     return redirect(url_for('clientes'))
+
 
 # ------------------- VEÍCULOS -------------------
 @app.route('/veiculos')
 def veiculos():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    cursor.execute('SELECT v.*, c.nome as dono FROM veiculos v JOIN clientes c ON v.cliente_id = c.id')
-    v_lista = cursor.fetchall()
-    cursor.execute('SELECT id, nome FROM clientes')
-    c_lista = cursor.fetchall()
-    return render_template('veiculos.html', veiculos=v_lista, clientes=c_lista)
+    
+    try:
+        # Busca veículos com o nome do dono (JOIN)
+        cursor.execute('SELECT v.*, c.nome as dono FROM veiculos v JOIN clientes c ON v.cliente_id = c.id')
+        v_lista = cursor.fetchall()
+        
+        # Busca lista de clientes para preencher o <select> no formulário de adição
+        cursor.execute('SELECT id, nome FROM clientes')
+        c_lista = cursor.fetchall()
+        
+        return render_template('veiculos.html', veiculos=v_lista, clientes=c_lista)
+    
+    except Exception as e:
+        return f"Erro ao carregar veículos: {e}"
+    
+    finally:
+        # Essencial para não travar o servidor do PythonAnywhere
+        cursor.close()
+        conexao.close()
 
 @app.route('/add_veiculo', methods=['POST'])
 def add_veiculo():
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s,%s,%s)',
-        (request.form['modelo'], request.form['placa'], request.form['cliente_id'])
-    )
-    mysql.connection.commit()
-    flash('Veículo registrado!', 'success')
-    return redirect(url_for('veiculos'))
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    
+    try:
+        cursor.execute(
+            'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s,%s,%s)',
+            (request.form['modelo'], request.form['placa'], request.form['cliente_id'])
+        )
+        conexao.commit()
+        flash('Veículo registrado!', 'success')
+    finally:
+        cursor.close()
+        conexao.close()
+        
+    return redirect(url_for('veiculos.html'))
 
 @app.route('/deletar_veiculo/<int:id>')
 def deletar_veiculo(id):
@@ -139,28 +226,65 @@ def deletar_veiculo(id):
     return redirect(url_for('veiculos'))
 
 # ------------------- SERVIÇOS -------------------
-@app.route('/servicos')
-def servicos():
+@app.route('/item')
+def item():
     conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-    cursor.execute('SELECT os.*, c.nome as c_nome, v.modelo as v_mod FROM ordens_servico os JOIN clientes c ON os.cliente_id = c.id JOIN veiculos v ON os.veiculo_id = v.id')
-    oss = cursor.fetchall()
-    cursor.execute('SELECT id, nome FROM clientes')
-    cs = cursor.fetchall()
-    cursor.execute('SELECT id, modelo, placa FROM veiculos')
-    vs = cursor.fetchall()
-    return render_template('os.html', ordens=oss, clientes=cs, veiculos=vs)
+    # O segredo está no buffered=True
+    cursor = conexao.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # 1. Busca as Ordens de Serviço
+        cursor.execute('SELECT os.*, c.nome as c_nome, v.modelo as v_mod FROM ordens_servico os JOIN clientes c ON os.cliente_id = c.id JOIN veiculos v ON os.veiculo_id = v.id')
+        oss = cursor.fetchall()
+        
+        # 2. Busca a lista de Clientes (agora funciona!)
+        cursor.execute('SELECT id, nome FROM clientes')
+        cs = cursor.fetchall()
+        
+        # 3. Busca a lista de Veículos
+        cursor.execute('SELECT id, modelo, placa FROM veiculos')
+        vs = cursor.fetchall()
+        
+        return render_template('os.html', ordens=oss, clientes=cs, veiculos=vs)
+    
+    finally:
+        cursor.close()
+        conexao.close()
+
+
 
 @app.route('/add_os', methods=['POST'])
 def add_os():
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        'INSERT INTO ordens_servico (cliente_id, veiculo_id, descricao, valor) VALUES (%s,%s,%s,%s)',
-        (request.form['cliente_id'], request.form['veiculo_id'], request.form['descricao'], request.form['valor'])
-    )
-    mysql.connection.commit()
-    flash('OS Aberta!', 'success')
-    return redirect(url_for('servicos'))
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    
+    try:
+        # Capturando os dados do formulário
+        cliente_id = request.form['cliente_id']
+        veiculo_id = request.form['veiculo_id']
+        descricao = request.form['descricao']
+        valor = request.form['valor']
+
+        # Executando o INSERT
+        cursor.execute(
+            'INSERT INTO ordens_servico (cliente_id, veiculo_id, descricao, valor) VALUES (%s, %s, %s, %s)',
+            (cliente_id, veiculo_id, descricao, valor)
+        )
+        
+        # Salvando no banco
+        conexao.commit()
+        flash('Ordem de Serviço aberta com sucesso!', 'success')
+        
+    except Exception as e:
+        conexao.rollback() # Cancela a operação em caso de erro
+        flash(f'Erro ao abrir OS: {e}', 'danger')
+        
+    finally:
+        # OBRIGATÓRIO fechar no PythonAnywhere
+        cursor.close()
+        conexao.close()
+        
+    return redirect(url_for('ordensservico.html'))
 
 @app.route('/deletar_os/<int:id>')
 def deletar_os(id):
@@ -175,19 +299,28 @@ def deletar_os(id):
 def estoque():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM estoque')
-    items = cursor.fetchall()
-    return render_template('estoque.html', estoque=items)
+    try:
+        cursor.execute('SELECT * FROM estoque')
+        items = cursor.fetchall()
+        return render_template('estoque.html', estoque=items)
+    finally:
+        cursor.close()
+        conexao.close()
 
 @app.route('/add_estoque', methods=['POST'])
 def add_estoque():
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        'INSERT INTO estoque (peca, quantidade) VALUES (%s,%s)',
-        (request.form['peca'], request.form['quantidade'])
-    )
-    mysql.connection.commit()
-    flash('Item adicionado ao estoque!', 'success')
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute(
+            'INSERT INTO estoque (peca, quantidade) VALUES (%s,%s)',
+            (request.form['peca'], request.form['quantidade'])
+        )
+        conexao.commit()
+        flash('Item adicionado ao estoque!', 'success')
+    finally:
+        cursor.close()
+        conexao.close()
     return redirect(url_for('estoque'))
 
 # ------------------- MAIN -------------------

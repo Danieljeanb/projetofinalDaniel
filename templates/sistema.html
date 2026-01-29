@@ -1,28 +1,57 @@
-{% extends 'base.html'%}
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Entrando no Sistema...</title>
-    <link rel="stylesheet" href="../area de cadastro/style.css">
-</head>
-<body class="success-body">
-    <div class="success-page">
-        <div class="dashboard-preview">
-            <div class="user-icon">👤</div>
-            <h2>Autenticando...</h2>
-            <p>João, estamos preparando sua oficina. Aguarde um instante.</p>
-            <div class="loader-line"></div>
-        </div>
-    </div>
+{% extends 'base.html' %}
 
-    <script>
-        // Lógica de redirecionamento automático
-        // 3000ms = 3 segundos de espera
-        setTimeout(function() {
-            window.location.href = "../area de cadastro/base.html";
-        }, 3000);
-    </script>
-</body>
-</html>
-{% extends 'base.html'%}
+{% block conteudo %}
+<style>
+    .success-body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 70vh;
+        text-align: center;
+    }
+    .dashboard-preview {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .user-icon { font-size: 50px; margin-bottom: 20px; }
+    .loader-line {
+        height: 4px;
+        width: 100%;
+        background: #eee;
+        margin-top: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .loader-line::after {
+        content: '';
+        position: absolute;
+        left: -50%;
+        height: 100%;
+        width: 50%;
+        background: #4facfe;
+        animation: loading 1.5s infinite;
+    }
+    @keyframes loading {
+        100% { left: 100%; }
+    }
+</style>
+
+<div class="success-body">
+    <div class="dashboard-preview">
+        <div class="user-icon">👤</div>
+        <h2>Autenticando...</h2>
+        <p>Estamos preparando sua oficina. Aguarde um instante.</p>
+        <div class="loader-line"></div>
+    </div>
+</div>
+
+<script>
+    // REDIRECIONAMENTO CORRETO:
+    // Usa a rota do Flask em vez de um arquivo .html
+    setTimeout(function() {
+        window.location.href = "{{ url_for('dashboard') }}";
+    }, 2500);
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+<h2 class="mb-4 fw-bold">Resumo da Oficina 🛠️</h2>
+
+<div class="row">
+    <!-- Card de Ações Rápidas -->
+    <div class="col-md-4 mb-4">
+        <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 15px;">
+            <h6 class="text-muted text-uppercase small fw-bold">Acesso Rápido</h6>
+            <div class="d-grid gap-2 mt-3">
+                <a href="/servicos" class="btn btn-dark">Nova Ordem de Serviço</a>
+                <a href="/clientes" class="btn btn-outline-dark">Cadastrar Cliente</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card de Status do Servidor -->
+    <div class="col-md-8 mb-4">
+        <div class="card p-4 shadow-sm border-0 bg-dark text-white" style="border-radius: 15px;">
+            <h5>Status do Sistema</h5>
+            <div class="mt-3">
+                <p class="mb-1 opacity-75">
+                    <i class="bi bi-database-check text-success me-2"></i>
+                    Banco de Dados MySQL: <span class="text-success fw-bold">Conectado</span>
+                </p>
+                <p class="mb-0 opacity-75">
+                    <i class="bi bi-cpu text-success me-2"></i>
+                    Servidor Flask: <span class="text-success fw-bold">Ativo</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Opcional: Card de estatísticas futuras -->
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-light border-0 shadow-sm p-4" style="border-radius: 15px;">
+            <h6 class="fw-bold"><i class="bi bi-info-circle me-2"></i> Dica do Dia</h6>
+            <p class="mb-0 text-muted">Lembre-se de conferir o estoque de peças antes de iniciar novas ordens de serviço complexas.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
