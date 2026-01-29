@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 # from flask_mysqldb import MySQL
-import mysql.connector as mysql
+import mysql.connector
 from dotenv import load_dotenv
 import os
 
@@ -12,7 +12,7 @@ app.secret_key = os.getenv('SECRET_KEY', '1234')
 
 # ------------------- CONFIGURAÇÃO BANCO -------------------
 def conectar_banco():
-    return mysql.connect(
+    return mysql.connector.connect(
         host=os.getenv('DB_HOST', 'localhost'),
         user=os.getenv('DB_USER', 'root'),
         password=os.getenv('DB_PASSWORD', ''),
