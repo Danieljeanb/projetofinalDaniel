@@ -150,28 +150,17 @@ def add_cliente():
     return redirect(url_for('clientes.html'))
 
 
-@app.route('/deletar_cliente/<int:id>')
-def deletar_cliente(id):
-    # 1. Usar sua função de conexão
-    conexao = conectar_banco()
-    cursor = conexao.cursor()
-    
-    try:
-        # 2. Executar a deleção
-        cursor.execute('DELETE FROM clientes WHERE id = %s', (id,))
-        
-        # 3. Salvar a alteração (COMMIT)
-        conexao.commit()
-        
-        flash('Cliente e dados vinculados removidos!', 'danger')
-    except Exception as e:
-        flash(f'Erro ao remover: {e}', 'warning')
-    finally:
-        # 4. Fechar conexão (OBRIGATÓRIO para não travar o PythonAnywhere)
-        cursor.close()
-        conexao.close()
-        
-    return redirect(url_for('clientes'))
+# @app.route('/deletar_veiculo/<int:id>')
+# def deletar_veiculo(id):
+#     conexao = conectar_banco() # Adicione isso
+#     cursor = conexao.cursor()
+#     cursor.execute('DELETE FROM veiculos WHERE id = %s', (id,))
+#     conexao.commit()
+#     cursor.close()
+#     conexao.close()
+#     flash('Veículo removido!', 'danger')
+#     return redirect(url_for('veiculos'))
+
 
 
 # ------------------- VEÍCULOS -------------------
