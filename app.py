@@ -206,13 +206,21 @@ def add_veiculo():
         
     return redirect(url_for('veiculos.html'))
 
-@app.route('/deletar_veiculo/<int:id>')
-def deletar_veiculo(id):
-    cursor = mysql.connection.cursor()
-    cursor.execute('DELETE FROM veiculos WHERE id = %s', (id,))
-    mysql.connection.commit()
-    flash('Veículo removido!', 'danger')
-    return redirect(url_for('veiculos'))
+@app.route('/deletar_cliente/<int:id>')
+def deletar_cliente(id): # O url_for procura este nome aqui
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute('DELETE FROM clientes WHERE id = %s', (id,))
+        conexao.commit()
+        flash('Cliente removido!', 'success')
+    except Exception as e:
+        flash(f'Erro ao deletar: {e}', 'danger')
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('clientes'))
+
 
 # ------------------- SERVIÇOS -------------------
 @app.route('/item')
@@ -314,4 +322,4 @@ def add_estoque():
 
 # ------------------- MAIN -------------------
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
