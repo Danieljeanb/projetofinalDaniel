@@ -4,6 +4,7 @@ import mysql.connector
 from dotenv import load_dotenv
 import os
 from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ------------------- CONFIGURAÇÃO APP -------------------
 app = Flask(__name__)
@@ -20,7 +21,6 @@ def conectar_banco():
         database=os.getenv('DB_NAME', 'sistema_oficina'),
         auth_plugin="mysql_native_password"
     )
-
 
 
 # ------------------- AUTENTICAÇÃO -------------------
@@ -470,6 +470,43 @@ def detalhes_os(id):
     finally:
         cursor.close()
         conexao.close()
+
+@app.route('/login')
+def login(): # O nome desta função deve ser o mesmo que você usa no url_for
+    return render_template('login.html')
+
+
+@app.route('/ordens')
+def listar_ordens():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    # 1. Busca Clientes para o Select
+    cursor.execute("SELECT id, nome FROM clientes")
+    lista_clientes = cursor.fetchall()
+
+    # 2. Busca Veículos para o Select
+    cursor.execute("SELECT id, modelo, placa FROM veiculos")
+    lista_veiculos = cursor.fetchall()
+
+    # 3. Busca Ordens com JOIN para pegar os nomes das colunas que você usou no HTML (o.c_nome e o.v_mod)
+    query = """
+        SELECT os.*, c.nome AS c_nome, v.modelo AS v_mod 
+        FROM ordens_servico os
+        JOIN clientes c ON os.cliente_id = c.id
+        JOIN veiculos v ON os.veiculo_id = v.id
+    """
+    cursor.execute(query)
+    lista_ordens = cursor.fetchall()
+
+    cursor.close()
+    conexao.close()
+
+    # IMPORTANTE: Os nomes à esquerda (clientes=...) devem bater com o que está no {% for %}
+    return render_template('ordens.html', 
+                           clientes=lista_clientes, 
+                           veiculos=lista_veiculos, 
+                           ordens=lista_ordens)
 
 
 
