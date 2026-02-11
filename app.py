@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import mysql.connector
 from dotenv import load_dotenv
 import os
+from functools import wraps
 
 # ------------------- CONFIGURAÇÃO APP -------------------
 app = Flask(__name__)
@@ -62,7 +63,37 @@ def cadastro():
 
     return render_template('cadastro.html')
 
+def is_user_logged_in():
+    """Verifica se o usuário está autenticado na sessão"""
+    from flask import session
+    return 'user_id' in session
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Adicione sua lógica de autenticação aqui
+        if not is_user_logged_in():  # sua função de validação
+            return 'Acesso negado', 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/pagamento')
+def pagamento():
+    return render_template('pagamento.html')
+
+
+@app.route('/servicos')
+def gerenciar_os(): # Este nome deve bater com o url_for
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM ordens_servico")
+        ordens = cursor.fetchall()
+        return render_template('gerenciar_os.html', ordens=ordens)
+    finally:
+        cursor.close()
+        conexao.close()
+    
 @app.route('/login', methods=['POST', 'GET'])
 def login_usuario():
     if request.method == 'POST':
@@ -147,7 +178,7 @@ def add_cliente():
         cursor.close()
         conexao.close()
 
-    return redirect(url_for('clientes.html'))
+    return redirect(url_for('clientes'))
 
 
 # @app.route('/deletar_veiculo/<int:id>')
@@ -189,22 +220,45 @@ def veiculos():
         conexao.close()
 
 @app.route('/add_veiculo', methods=['POST'])
+@login_required
 def add_veiculo():
     conexao = conectar_banco()
     cursor = conexao.cursor()
     
     try:
+        # A identação aqui deve ser maior que a do 'try'
         cursor.execute(
-            'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s,%s,%s)',
+            'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s, %s, %s)',
             (request.form['modelo'], request.form['placa'], request.form['cliente_id'])
         )
         conexao.commit()
-        flash('Veículo registrado!', 'success')
+        flash('Veículo registrado com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro ao registrar: {e}', 'danger')
     finally:
         cursor.close()
         conexao.close()
         
-    return redirect(url_for('veiculos.html'))
+    return redirect(url_for('veiculos')) # Use o nome da função 'veiculos', não o arquivo .html
+
+
+@app.route('/deletar_veiculo/<int:id>')
+def deletar_veiculo(id): # O NOME AQUI DEVE SER EXATAMENTE ESTE
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute('DELETE FROM veiculos WHERE id = %s', (id,))
+        conexao.commit()
+        flash('Veículo removido com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro ao deletar: {e}', 'danger')
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('veiculos'))
+
+
+
 
 @app.route('/deletar_cliente/<int:id>')
 def deletar_cliente(id): # O url_for procura este nome aqui
@@ -250,8 +304,8 @@ def item():
 
 
 
-@app.route('/add_os', methods=['POST'])
-def add_os():
+@app.route('/ordensdeservico', methods=['POST'])
+def add_ordem_servico():
     conexao = conectar_banco()
     cursor = conexao.cursor()
     
@@ -289,7 +343,7 @@ def deletar_os(id):
     cursor.execute('DELETE FROM ordens_servico WHERE id = %s', (id,))
     mysql.connection.commit()
     flash('OS excluída!', 'warning')
-    return redirect(url_for('servicos'))
+    return redirect(url_for('ordensservico'))
 
 # ------------------- ESTOQUE -------------------
 @app.route('/estoque')
@@ -319,6 +373,117 @@ def add_estoque():
         cursor.close()
         conexao.close()
     return redirect(url_for('estoque'))
+
+@app.route('/relatorios')
+def relatorios():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    
+    try:
+        # 1. Total faturado em OS Concluídas
+        cursor.execute("SELECT SUM(valor) as total FROM ordens_servico WHERE status = 'CONCLUÍDA'")
+        faturamento = cursor.fetchone()['total'] or 0
+
+        # 2. Contagem de OS por Status (para o gráfico/resumo)
+        cursor.execute("SELECT status, COUNT(*) as qtd FROM ordens_servico GROUP BY status")
+        status_resumo = cursor.fetchall()
+
+        # 3. Top Clientes (quem mais gastou na oficina)
+        query_top = """
+            SELECT c.nome, SUM(os.valor) as total_gasto 
+            FROM ordens_servico os 
+            JOIN clientes c ON os.cliente_id = c.id 
+            WHERE os.status = 'CONCLUÍDA'
+            GROUP BY c.id ORDER BY total_gasto DESC LIMIT 5
+        """
+        cursor.execute(query_top)
+        top_clientes = cursor.fetchall()
+
+        return render_template('relatorios.html', 
+                               faturamento=faturamento, 
+                               status_resumo=status_resumo, 
+                               top_clientes=top_clientes)
+    finally:
+        cursor.close()
+        conexao.close()
+
+# @app.route('/relatorios')
+# @login_required
+# def relatorios():
+#     conexao = conectar_banco()
+#     # Usamos dictionary=True para que os nomes (faturamento, status, etc) batam com o seu HTML
+#     cursor = conexao.cursor(dictionary=True)
+    
+#     try:
+#         # 1. Total faturado (Soma de todos os valores das OS com status CONCLUÍDA)
+#         cursor.execute("SELECT SUM(valor) as faturamento FROM ordens_servico WHERE status = 'CONCLUÍDA'")
+#         resultado_faturamento = cursor.fetchone()
+#         faturamento = resultado_faturamento['faturamento'] if resultado_faturamento['faturamento'] else 0.0
+
+#         # 2. Resumo de Status (Agrupa e conta quantas OS existem em cada status)
+#         cursor.execute("SELECT status, COUNT(*) as qtd FROM ordens_servico GROUP BY status")
+#         status_resumo = cursor.fetchall()
+
+#         # 3. Top 5 Clientes (Soma quanto cada cliente gastou e ordena pelos que pagaram mais)
+#         query_top = """
+#             SELECT c.nome, SUM(os.valor) as total_gasto 
+#             FROM ordens_servico os 
+#             JOIN clientes c ON os.cliente_id = c.id 
+#             WHERE os.status = 'CONCLUÍDA'
+#             GROUP BY c.id 
+#             ORDER BY total_gasto DESC 
+#             LIMIT 5
+#         """
+#         cursor.execute(query_top)
+#         top_clientes = cursor.fetchall()
+
+#         return render_template('relatorios.html', 
+#                                faturamento=faturamento, 
+#                                status_resumo=status_resumo, 
+#                                top_clientes=top_clientes)
+    
+#     except Exception as e:
+#         flash(f"Erro ao gerar relatórios: {e}", "danger")
+#         return redirect(url_for('dashboard'))
+    
+#     finally:
+#         cursor.close()
+#         conexao.close()
+
+@app.route('/os/add_item/<int:os_id>', methods=['POST'])
+@login_required
+def add_item_os(os_id):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute(
+            'INSERT INTO itens_os (os_id, descricao, quantidade, valor_unitario) VALUES (%s, %s, %s, %s)',
+            (os_id, request.form['descricao'], request.form['quantidade'], request.form['valor'].replace(',', '.'))
+        )
+        conexao.commit()
+        flash('Item adicionado!', 'success')
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('detalhes_os', id=os_id))
+
+@app.route('/os/add_servico/<int:os_id>', methods=['POST'])
+def add_servico_os(os_id):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute(
+            'INSERT INTO servicos_os (os_id, descricao, horas, valor_hora) VALUES (%s, %s, %s, %s)',
+            (os_id, request.form['descricao'], request.form['horas'], request.form['valor'].replace(',', '.'))
+        )
+        conexao.commit()
+        flash('Serviço adicionado!', 'success')
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('detalhes_os', id=os_id))
+
+
 
 # ------------------- MAIN -------------------
 if __name__ == '__main__':
