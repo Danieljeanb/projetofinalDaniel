@@ -1,125 +1,98 @@
--- Criar banco de dados
-DROP DATABASE IF EXISTS oficina;
-CREATE DATABASE oficina;
-USE oficina;
+CREATE DATABASE sistema_oficina;
+USE sistema_oficina;
 
--- 1. Usuários
-DROP TABLE IF EXISTS usuarios;
+-- 1. Usuários do Sistema
 CREATE TABLE usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     senha VARCHAR(255) NOT NULL,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    nivel_acesso ENUM('admin', 'recepcao', 'mecanico') DEFAULT 'recepcao'
 );
 
 -- 2. Clientes
-DROP TABLE IF EXISTS clientes;
 CREATE TABLE clientes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
+    cpf_cnpj VARCHAR(20) UNIQUE NOT NULL,
     telefone VARCHAR(20),
-    email VARCHAR(100),CREATE DATABASE IF NOT EXISTS minha_oficina;
-USE minha_oficina;
-
--- 2. Tabela de Usuários (Login)
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    senha_hash VARCHAR(255) NOT NULL
-);
-
--- 3. Tabela de Clientes
-CREATE TABLE IF NOT EXISTS clientes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
-    telefone VARCHAR(20),
-    documento VARCHAR(20),
     email VARCHAR(100),
     endereco TEXT
 );
 
--- 4. Tabela de Veículos (Relacionada aos Clientes)
-CREATE TABLE IF NOT EXISTS veiculos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    modelo VARCHAR(100) NOT NULL,
-    placa VARCHAR(10) NOT NULL UNIQUE,
-    cliente_id INT,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
-);
-
--- 5. Tabela de Ordens de Serviço (Referenciada na rota /item)
-CREATE TABLE IF NOT EXISTS ordens_servico (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    cliente_id INT,
-    veiculo_id INT,
-    descricao TEXT,
-    status VARCHAR(50) DEFAULT 'Pendente',
-    data_abertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
-    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id) ON DELETE CASCADE
-);
-
--- 6. Tabela de Estoque (Aquela que gerou o erro inicial)
-CREATE TABLE IF NOT EXISTS estoque (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    item VARCHAR(100) NOT NULL,
-    quantidade INT DEFAULT 0,
-    preco DECIMAL(10, 2)
-);
-
--- 7. Itens da OS (Para o formulário de "Peças utilizadas")
-CREATE TABLE IF NOT EXISTS itens_os (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    os_id INT,
-    descricao VARCHAR(255) NOT NULL,
-    quantidade INT NOT NULL,
-    valor_unitario DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE
-);
-
--- 8. Serviços da OS (Para o formulário de "Serviços executados")
-CREATE TABLE IF NOT EXISTS servicos_os (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    os_id INT,
-    descricao VARCHAR(255) NOT NULL,
-    horas DECIMAL(5, 2),
-    valor_hora DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE
-);
-    documento VARCHAR(20),
-    endereco TEXT,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 3. Veículos
-DROP TABLE IF EXISTS veiculos;
+-- 3. Veículos (Relacionado ao Cliente)
 CREATE TABLE veiculos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
-    modelo VARCHAR(50) NOT NULL,
     placa VARCHAR(10) UNIQUE NOT NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+    modelo VARCHAR(50),
+    marca VARCHAR(50),
+    ano INT,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
--- 4. Ordens de Serviço
-CREATE TABLE IF NOT EXISTS ordens_servico (
+-- 4. Mecânicos
+CREATE TABLE mecanicos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    especialidade VARCHAR(50),
+    comissao_percentual DECIMAL(5,2) DEFAULT 0.00
+);
+
+-- 5. Peças (Estoque)
+CREATE TABLE pecas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    valor_venda DECIMAL(10,2) NOT NULL,
+    estoque_atual INT DEFAULT 0
+);
+
+-- 6. Ordens de Serviço (OS)
+CREATE TABLE ordens_servico (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     veiculo_id INT NOT NULL,
-    descricao TEXT,
-    valor DECIMAL(10, 2),
-    data_abertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    mecanico_id INT,
+    data_abertura DATETIME DEFAULT CURRENT_TIMESTAMP,
+    data_conclusao DATETIME,
+    status ENUM('ABERTA', 'EM ANDAMENTO', 'CONCLUÍDA', 'CANCELADA') DEFAULT 'ABERTA',
+    valor_total DECIMAL(10,2) DEFAULT 0.00,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id)
+    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id),
+    FOREIGN KEY (mecanico_id) REFERENCES mecanicos(id)
 );
 
--- 5. Estoque
-DROP TABLE IF EXISTS estoque;
-CREATE TABLE estoque (
+-- 7. Itens da OS (Peças e Serviços)
+CREATE TABLE os_itens (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    peca VARCHAR(100) NOT NULL,
-    quantidade INT DEFAULT 0,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    os_id INT NOT NULL,
+    peca_id INT, -- NULL se for apenas serviço
+    descricao_servico VARCHAR(255), -- Preenchido se não for peça
+    quantidade INT DEFAULT 1,
+    valor_unitario DECIMAL(10,2) NOT NULL,
+    tipo ENUM('PEÇA', 'SERVIÇO') NOT NULL,
+    FOREIGN KEY (os_id) REFERENCES ordens_servico(id) ON DELETE CASCADE,
+    FOREIGN KEY (peca_id) REFERENCES pecas(id)
 );
+
+-- 8. Pagamentos
+CREATE TABLE pagamentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    os_id INT NOT NULL,
+    valor_pago DECIMAL(10,2) NOT NULL,
+    metodo_pagamento ENUM('DINHEIRO', 'CARTAO', 'PIX'),
+    data_pagamento DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (os_id) REFERENCES ordens_servico(id)
+);
+
+-- TRIGGER: Decrementar estoque automaticamente ao inserir peça na OS
+DELIMITER //
+CREATE TRIGGER tr_baixa_estoque AFTER INSERT ON os_itens
+FOR EACH ROW
+BEGIN
+    IF NEW.tipo = 'PEÇA' AND NEW.peca_id IS NOT NULL THEN
+        UPDATE pecas 
+        SET estoque_atual = estoque_atual - NEW.quantidade
+        WHERE id = NEW.peca_id;
+    END IF;
+END;

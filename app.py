@@ -17,15 +17,10 @@ def conectar_banco():
         host=os.getenv('DB_HOST', 'localhost'),
         user=os.getenv('DB_USER', 'root'),
         password=os.getenv('DB_PASSWORD', ''),
-        database=os.getenv('DB_NAME', 'minha_oficina'),
+        database=os.getenv('DB_NAME', 'sistema_oficina'),
         auth_plugin="mysql_native_password"
     )
 
-# mysql = MySQL(app)
-# app.config['MYSQL_HOST'] = os.getenv('DB_HOST', 'localhost')
-# app.config['MYSQL_USER'] = os.getenv('DB_USER', 'root')
-# app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASSWORD', '')
-# app.config['MYSQL_DB'] = os.getenv('DB_NAME', 'minha_oficina')
 
 
 # ------------------- AUTENTICAÇÃO -------------------
@@ -181,19 +176,7 @@ def add_cliente():
     return redirect(url_for('clientes'))
 
 
-# @app.route('/deletar_veiculo/<int:id>')
-# def deletar_veiculo(id):
-#     conexao = conectar_banco() # Adicione isso
-#     cursor = conexao.cursor()
-#     cursor.execute('DELETE FROM veiculos WHERE id = %s', (id,))
-#     conexao.commit()
-#     cursor.close()
-#     conexao.close()
-#     flash('Veículo removido!', 'danger')
-#     return redirect(url_for('veiculos'))
-
-
-
+#
 # ------------------- VEÍCULOS -------------------
 @app.route('/veiculos')
 def veiculos():
@@ -256,8 +239,6 @@ def deletar_veiculo(id): # O NOME AQUI DEVE SER EXATAMENTE ESTE
         cursor.close()
         conexao.close()
     return redirect(url_for('veiculos'))
-
-
 
 
 @app.route('/deletar_cliente/<int:id>')
@@ -407,48 +388,7 @@ def relatorios():
         cursor.close()
         conexao.close()
 
-# @app.route('/relatorios')
-# @login_required
-# def relatorios():
-#     conexao = conectar_banco()
-#     # Usamos dictionary=True para que os nomes (faturamento, status, etc) batam com o seu HTML
-#     cursor = conexao.cursor(dictionary=True)
-    
-#     try:
-#         # 1. Total faturado (Soma de todos os valores das OS com status CONCLUÍDA)
-#         cursor.execute("SELECT SUM(valor) as faturamento FROM ordens_servico WHERE status = 'CONCLUÍDA'")
-#         resultado_faturamento = cursor.fetchone()
-#         faturamento = resultado_faturamento['faturamento'] if resultado_faturamento['faturamento'] else 0.0
-
-#         # 2. Resumo de Status (Agrupa e conta quantas OS existem em cada status)
-#         cursor.execute("SELECT status, COUNT(*) as qtd FROM ordens_servico GROUP BY status")
-#         status_resumo = cursor.fetchall()
-
-#         # 3. Top 5 Clientes (Soma quanto cada cliente gastou e ordena pelos que pagaram mais)
-#         query_top = """
-#             SELECT c.nome, SUM(os.valor) as total_gasto 
-#             FROM ordens_servico os 
-#             JOIN clientes c ON os.cliente_id = c.id 
-#             WHERE os.status = 'CONCLUÍDA'
-#             GROUP BY c.id 
-#             ORDER BY total_gasto DESC 
-#             LIMIT 5
-#         """
-#         cursor.execute(query_top)
-#         top_clientes = cursor.fetchall()
-
-#         return render_template('relatorios.html', 
-#                                faturamento=faturamento, 
-#                                status_resumo=status_resumo, 
-#                                top_clientes=top_clientes)
-    
-#     except Exception as e:
-#         flash(f"Erro ao gerar relatórios: {e}", "danger")
-#         return redirect(url_for('dashboard'))
-    
-#     finally:
-#         cursor.close()
-#         conexao.close()
+#
 
 @app.route('/os/add_item/<int:os_id>', methods=['POST'])
 @login_required
@@ -482,6 +422,54 @@ def add_servico_os(os_id):
         cursor.close()
         conexao.close()
     return redirect(url_for('detalhes_os', id=os_id))
+
+@app.route('/os/detalhes/<int:id>')
+@login_required
+def detalhes_os(id):
+    conexao = conectar_banco()
+    # buffered=True é importante para realizar múltiplos SELECTs na mesma conexão
+    cursor = conexao.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # 1. Busca os dados da OS, Cliente e Veículo (JOIN)
+        query_os = """
+            SELECT os.*, c.nome as cliente_nome, v.modelo as veiculo_nome, v.placa 
+            FROM ordens_servico os
+            JOIN clientes c ON os.cliente_id = c.id
+            JOIN veiculos v ON os.veiculo_id = v.id
+            WHERE os.id = %s
+        """
+        cursor.execute(query_os, (id,))
+        os_data = cursor.fetchone()
+
+        if not os_data:
+            flash("Ordem de Serviço não encontrada!", "danger")
+            return redirect(url_for('gerenciar_os'))
+
+        # 2. Busca Peças vinculadas
+        cursor.execute("SELECT * FROM itens_os WHERE os_id = %s", (id,))
+        pecas = cursor.fetchall()
+        
+        # 3. Busca Serviços vinculados
+        cursor.execute("SELECT * FROM servicos_os WHERE os_id = %s", (id,))
+        servicos = cursor.fetchall()
+
+        # 4. Cálculo do Total Geral para o card de destaque
+        total_pecas = sum(p['quantidade'] * p['valor_unitario'] for p in pecas)
+        total_servicos = sum(s['horas'] * s['valor_hora'] for s in servicos)
+        total_geral = total_pecas + total_servicos
+
+        return render_template('detalhes_os.html', 
+                               os=os_data, 
+                               pecas=pecas, 
+                               servicos=servicos, 
+                               total=total_geral)
+    except Exception as e:
+        flash(f"Erro ao carger detalhes: {e}", "danger")
+        return redirect(url_for('gerenciar_os'))
+    finally:
+        cursor.close()
+        conexao.close()
 
 
 
