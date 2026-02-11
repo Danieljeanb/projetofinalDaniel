@@ -84,7 +84,13 @@ def gerenciar_os(): # Este nome deve bater com o url_for
     try:
         cursor.execute("SELECT * FROM ordens_servico")
         ordens = cursor.fetchall()
-        return render_template('gerenciar_os.html', ordens=ordens)
+        sql_clientes = "SELECT * FROM clientes"
+        cursor.execute(sql_clientes)
+        clientes = cursor.fetchall()
+        sql_veiculos = "SELECT * FROM veiculos"
+        cursor.execute(sql_veiculos)
+        veiculos = cursor.fetchall()
+        return render_template('gerenciar_os.html', ordens=ordens, clientes=clientes, veiculos=veiculos)
     finally:
         cursor.close()
         conexao.close()
@@ -178,51 +184,6 @@ def add_cliente():
 
 #
 # ------------------- VEÍCULOS -------------------
-@app.route('/veiculos')
-def veiculos():
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-    
-    try:
-        # Busca veículos com o nome do dono (JOIN)
-        cursor.execute('SELECT v.*, c.nome as dono FROM veiculos v JOIN clientes c ON v.cliente_id = c.id')
-        v_lista = cursor.fetchall()
-        
-        # Busca lista de clientes para preencher o <select> no formulário de adição
-        cursor.execute('SELECT id, nome FROM clientes')
-        c_lista = cursor.fetchall()
-        
-        return render_template('veiculos.html', veiculos=v_lista, clientes=c_lista)
-    
-    except Exception as e:
-        return f"Erro ao carregar veículos: {e}"
-    
-    finally:
-        # Essencial para não travar o servidor do PythonAnywhere
-        cursor.close()
-        conexao.close()
-
-@app.route('/add_veiculo', methods=['POST'])
-@login_required
-def add_veiculo():
-    conexao = conectar_banco()
-    cursor = conexao.cursor()
-    
-    try:
-        # A identação aqui deve ser maior que a do 'try'
-        cursor.execute(
-            'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s, %s, %s)',
-            (request.form['modelo'], request.form['placa'], request.form['cliente_id'])
-        )
-        conexao.commit()
-        flash('Veículo registrado com sucesso!', 'success')
-    except Exception as e:
-        flash(f'Erro ao registrar: {e}', 'danger')
-    finally:
-        cursor.close()
-        conexao.close()
-        
-    return redirect(url_for('veiculos')) # Use o nome da função 'veiculos', não o arquivo .html
 
 
 @app.route('/deletar_veiculo/<int:id>')
@@ -507,6 +468,50 @@ def listar_ordens():
                            clientes=lista_clientes, 
                            veiculos=lista_veiculos, 
                            ordens=lista_ordens)
+
+
+@app.route('/veiculos')
+def veiculos():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    
+    try:
+        # Busca veículos com o nome do dono (JOIN)
+        cursor.execute('SELECT v.*, c.nome as dono FROM veiculos v JOIN clientes c ON v.cliente_id = c.id')
+        v_lista = cursor.fetchall()
+        
+        # Busca lista de clientes para preencher o <select> no formulário de adição
+        cursor.execute('SELECT id, nome FROM clientes')
+        c_lista = cursor.fetchall()
+        
+        return render_template('veiculos.html', veiculos=v_lista, clientes=c_lista)
+    
+    except Exception as e:
+        return f"Erro ao carregar veículos: {e}"
+    
+    finally:
+        # Essencial para não travar o servidor do PythonAnywhere
+        cursor.close()
+        conexao.close()
+
+@app.route('/add_veiculo', methods=['POST'])
+def add_veiculo():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    
+    try:
+        cursor.execute(
+            'INSERT INTO veiculos (modelo, placa, cliente_id) VALUES (%s,%s,%s)',
+            (request.form['modelo'], request.form['placa'], request.form['cliente_id'])
+        )
+        conexao.commit()
+        flash('Veículo registrado!', 'success')
+    finally:
+        cursor.close()
+        conexao.close()
+        
+    return redirect(url_for('veiculos'))
+
 
 
 
