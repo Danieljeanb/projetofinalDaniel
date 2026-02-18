@@ -10,6 +10,7 @@ CREATE TABLE usuarios (
     nivel_acesso ENUM('admin', 'recepcao', 'mecanico') DEFAULT 'recepcao'
 );
 
+
 -- 2. Clientes
 CREATE TABLE clientes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,7 +86,7 @@ CREATE TABLE pagamentos (
     FOREIGN KEY (os_id) REFERENCES ordens_servico(id)
 );
 
--- TRIGGER: Decrementar estoque automaticamente ao inserir peça na OS
+-- TRIGGER: Correção no fechamento
 DELIMITER //
 CREATE TRIGGER tr_baixa_estoque AFTER INSERT ON os_itens
 FOR EACH ROW
@@ -95,4 +96,64 @@ BEGIN
         SET estoque_atual = estoque_atual - NEW.quantidade
         WHERE id = NEW.peca_id;
     END IF;
-END;
+END // -- Adicione o // aqui
+DELIMITER ; -- Adicione esta linha para voltar ao padrão ;
+
+
+USE sistema_oficina;
+
+-- 1. Inserir Usuários
+INSERT INTO usuarios (nome, email, senha, nivel_acesso) VALUES 
+('Admin Geral', 'admin@oficina.com', 'hash_senha_123', 'admin'),
+('Recepcionista Ana', 'ana@oficina.com', 'hash_senha_456', 'recepcao');
+
+-- 2. Inserir Clientes
+INSERT INTO clientes (nome, cpf_cnpj, telefone, email, endereco) VALUES 
+('João Silva', '123.456.789-00', '(11) 98888-7777', 'joao@email.com', 'Rua das Flores, 123'),
+('Maria Oliveira', '987.654.321-11', '(11) 91111-2222', 'maria@email.com', 'Av. Central, 500');
+
+-- 3. Inserir Veículos (ligados aos clientes acima)
+INSERT INTO veiculos (cliente_id, placa, modelo, marca, ano) VALUES 
+(1, 'ABC-1234', 'Civic', 'Honda', 2020),
+(2, 'XYZ-9876', 'Onix', 'Chevrolet', 2022);
+
+-- 4. Inserir Mecânicos
+INSERT INTO mecanicos (nome, especialidade, comissao_percentual) VALUES 
+('Roberto Carlos', 'Motores', 10.00),
+('Marcos Souza', 'Suspensão e Freios', 8.50);
+
+-- 5. Inserir Peças (Estoque inicial)
+INSERT INTO pecas (nome, valor_venda, estoque_atual) VALUES 
+('Filtro de Óleo', 45.90, 50),
+('Pastilha de Freio', 120.00, 20),
+('Óleo 5W30 (Litro)', 35.00, 100);
+
+-- 6. Abrir uma Ordem de Serviço (OS)
+-- Cliente 1, Veículo 1, Mecânico 1
+INSERT INTO ordens_servico (cliente_id, veiculo_id, mecanico_id, status, valor_total) VALUES 
+(1, 1, 1, 'CONCLUÍDA', 245.90);
+
+-- 7. Adicionar Itens na OS (Peças e Serviços)
+-- Nota: Ao inserir a 'PEÇA' 1, a Trigger que criamos reduzirá o estoque de 50 para 49.
+INSERT INTO os_itens (os_id, peca_id, descricao_servico, quantidade, valor_unitario, tipo) VALUES 
+(1, 1, NULL, 1, 45.90, 'PEÇA'),           -- Peça (Filtro)
+(1, NULL, 'Troca de Óleo e Filtro', 1, 200.00, 'SERVIÇO'); -- Mão de obra
+
+-- 8. Registrar Pagamento
+INSERT INTO pagamentos (os_id, valor_pago, metodo_pagamento) VALUES 
+(1, 245.90, 'PIX');
+
+SELECT 
+    p.nome AS peca,
+    SUM(oi.quantidade) AS total_vendido,
+    SUM(oi.quantidade * oi.valor_unitario) AS faturamento_bruto,
+    -- Supondo uma margem estimada ou buscando o valor unitário da tabela de peças
+    COUNT(DISTINCT oi.os_id) AS total_ordens_servico,
+    DATE_FORMAT(os.data_conclusao, '%d/%m/%Y') AS ultima_venda
+FROM os_itens oi
+JOIN pecas p ON oi.peca_id = p.id
+JOIN ordens_servico os ON oi.os_id = os.id
+WHERE oi.tipo = 'PEÇA' 
+  AND os.status = 'CONCLUÍDA'
+GROUP BY p.id, p.nome
+ORDER BY faturamento_bruto DESC;

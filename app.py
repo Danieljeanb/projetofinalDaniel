@@ -63,12 +63,18 @@ def is_user_logged_in():
     from flask import session
     return 'user_id' in session
 
+
+from functools import wraps
+from flask import session, redirect, url_for, flash
+
 def login_required(f):
+   
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Adicione sua lógica de autenticação aqui
-        if not is_user_logged_in():  # sua função de validação
-            return 'Acesso negado', 401
+        # Verifica se a chave 'user_id' existe na sessão do navegador
+        if 'user_id' not in session:
+            flash('Acesso negado! Por favor, faça login para continuar.', 'danger')
+            return redirect(url_for('login_usuario'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -90,11 +96,15 @@ def gerenciar_os(): # Este nome deve bater com o url_for
         sql_veiculos = "SELECT * FROM veiculos"
         cursor.execute(sql_veiculos)
         veiculos = cursor.fetchall()
-        return render_template('gerenciar_os.html', ordens=ordens, clientes=clientes, veiculos=veiculos)
+        pecas = cursor.fetchall()
+        return render_template('gerenciar_os.html', ordens=ordens, clientes=clientes, veiculos=veiculos, pecas=pecas)
     finally:
         cursor.close()
         conexao.close()
     
+    
+# 
+
 @app.route('/login', methods=['POST', 'GET'])
 def login_usuario():
     if request.method == 'POST':
@@ -130,7 +140,7 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     # Se quiser passar dados dinâmicos para os cards, faça aqui
-    return render_template('dashboard.html')
+    return render_template('dashboard.html', nome=session.get('user_nome'))
 
 
 # ------------------- CLIENTES -------------------
@@ -291,14 +301,22 @@ def deletar_os(id):
 @app.route('/estoque')
 def estoque():
     conexao = conectar_banco()
+    if conexao is None:
+        return "Erro: Não foi possível conectar ao banco de dados", 500
+        
     cursor = conexao.cursor(dictionary=True)
     try:
         cursor.execute('SELECT * FROM estoque')
         items = cursor.fetchall()
         return render_template('estoque.html', estoque=items)
+    except Exception as e:
+        # Isso imprimirá o erro real no console para você ler
+        print(f"Erro ao executar query: {e}")
+        return f"Erro no banco de dados: {e}", 500
     finally:
         cursor.close()
         conexao.close()
+
 
 @app.route('/add_estoque', methods=['POST'])
 def add_estoque():
@@ -319,35 +337,43 @@ def add_estoque():
 @app.route('/relatorios')
 def relatorios():
     conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
+    cursor = conexao.cursor(dictionary=True, buffered=True)
     
     try:
-        # 1. Total faturado em OS Concluídas
+        # 1. Faturamento Total - Alterado 'valor_total' para 'valor'
         cursor.execute("SELECT SUM(valor) as total FROM ordens_servico WHERE status = 'CONCLUÍDA'")
-        faturamento = cursor.fetchone()['total'] or 0
+        res_faturamento = cursor.fetchone()
+        faturamento = res_faturamento['total'] if res_faturamento and res_faturamento['total'] else 0
 
-        # 2. Contagem de OS por Status (para o gráfico/resumo)
+        # 2. Resumo de Status
         cursor.execute("SELECT status, COUNT(*) as qtd FROM ordens_servico GROUP BY status")
         status_resumo = cursor.fetchall()
 
-        # 3. Top Clientes (quem mais gastou na oficina)
-        query_top = """
-            SELECT c.nome, SUM(os.valor) as total_gasto 
-            FROM ordens_servico os 
-            JOIN clientes c ON os.cliente_id = c.id 
+        # 3. Top 5 Clientes - Alterado 'valor_total' para 'valor'
+        query_top_clientes = """
+            SELECT c.nome, SUM(os.valor) as total_gasto
+            FROM ordens_servico os
+            JOIN clientes c ON os.cliente_id = c.id
             WHERE os.status = 'CONCLUÍDA'
-            GROUP BY c.id ORDER BY total_gasto DESC LIMIT 5
+            GROUP BY c.id
+            ORDER BY total_gasto DESC
+            LIMIT 5
         """
-        cursor.execute(query_top)
+        cursor.execute(query_top_clientes)
         top_clientes = cursor.fetchall()
 
         return render_template('relatorios.html', 
                                faturamento=faturamento, 
                                status_resumo=status_resumo, 
                                top_clientes=top_clientes)
+    except Exception as e:
+        print(f"Erro no Relatório: {e}")
+        return f"Erro ao gerar relatórios: {e}", 500
     finally:
         cursor.close()
         conexao.close()
+
+
 
 #
 

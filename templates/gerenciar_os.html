@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 
 {% block conteudo %}
@@ -8,6 +7,7 @@
     input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
     .status-badge { font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; }
 </style>
+<link href="https://cdn.jsdelivr.net" rel="stylesheet" />
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -75,60 +75,94 @@
 
 <!-- Modal Nova OS -->
 <div class="modal fade" id="modalNovaOS" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <!-- O action aponta para a função no app.py -->
-        <form action="{{ url_for('gerenciar_os') }}" method="POST" class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Abrir Nova Ordem de Serviço</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Cliente</label>
-                        <select name="cliente_id" class="form-select" required>
-                            <option value="">Selecione o Cliente...</option>
-                            {% for c in clientes %}
-                            <option value="{{ c.id }}">{{ c.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Veículo</label>
-                        <select name="veiculo_id" class="form-select" required>
-                            <option value="">Selecione o Veículo...</option>
-                            {% for v in veiculos %}
-                            <option value="{{ v.id }}">{{ v.modelo }} ({{ v.placa }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Mecânico Designado</label>
-                        <input type="text" name="mecanico" class="form-control" placeholder="Nome do mecânico">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Status Inicial</label>
-                        <select name="status" class="form-select">
-                            <option value="ABERTA">ABERTA</option>
-                            <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
-                            <option value="AGUARDANDO_PEÇAS">AGUARDANDO PEÇAS</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Problema Relatado</label>
-                        <textarea name="problema" class="form-control" rows="3" required placeholder="Descreva o que o cliente relatou..."></textarea>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Observações Internas</label>
-                        <textarea name="observacoes" class="form-control" rows="2"></textarea>
+        <div class="modal-dialog modal-lg">
+            <form action="{{ url_for('gerenciar_os') }}" method="POST" class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">🛠️ Abrir Nova Ordem de Serviço</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Busca de Cliente -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cliente</label>
+                            <select name="cliente_id" id="cliente_id" class="form-select select2-busca" required>
+                                <option value="">Digite o nome do cliente...</option>
+                                {% for c in clientes %}
+                                <option value="{{ c.id }}">{{ c.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Veículo Filtrado -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Veículo</label>
+                            <select name="veiculo_id" id="veiculo_id" class="form-select select2-busca" required disabled>
+                                <option value="">Selecione o cliente primeiro...</option>
+                            </select>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Financeiro -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-primary">Peça (R$)</label>
+                            <input type="number" step="0.01" id="v_peca" name="valor_peca" class="form-control calc-total" value="0.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-success">Mão de Obra (R$)</label>
+                            <input type="number" step="0.01" id="v_serv" name="valor_servico" class="form-control calc-total" value="0.00" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-danger">Total Estimado</label>
+                            <div class="h4 mt-1" id="total_display">R$ 0,00</div>
+                        </div>
+
+                        <!-- ... (resto dos seus campos de mecanico, problema, etc) -->
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-dark px-4">Abrir OS</button>
-            </div>
-        </form>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-dark px-4">Salvar Ordem de Serviço</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- SCRIPTS DE MELHORIA -->
+<script src="https://code.jquery.com"></script>
+<script src="https://cdn.jsdelivr.net"></script>
+
+<script>
+$(document).ready(function() {
+    // 1. Iniciar Busca rápida
+    $('.select2-busca').select2({
+        dropdownParent: $('#modalNovaOS'),
+        width: '100%'
+    });
+
+    // 2. Filtro de Veículos por Cliente
+    $('#cliente_id').on('change', function() {
+        var cliente_id = $(this).val();
+        var $veiculoSelect = $('#veiculo_id');
+
+        if (cliente_id) {
+            $.getJSON('/get_veiculos/' + cliente_id, function(data) {
+                $veiculoSelect.empty().append('<option value="">Selecione o Veículo...</option>');
+                $.each(data, function(i, v) {
+                    $veiculoSelect.append('<option value="'+v.id+'">'+v.modelo+' ('+v.placa+')</option>');
+                });
+                $veiculoSelect.prop('disabled', false);
+            });
+        }
+    });
+
+    // 3. Cálculo de Total em tempo real
+    $('.calc-total').on('input', function() {
+        var p = parseFloat($('#v_peca').val()) || 0;
+        var s = parseFloat($('#v_serv').val()) || 0;
+        $('#total_display').text('R$ ' + (p + s).toLocaleString('pt-BR', {minimumFractionDigits: 2}));
+    });
+});
+</script>
 {% endblock %}

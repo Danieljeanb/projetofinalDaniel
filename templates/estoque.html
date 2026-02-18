@@ -16,26 +16,45 @@
     .qty-badge { width: 110px; display: inline-block; padding: 6px; }
 </style>
 
+
+<!-- Elemento do Loader (Essencial para o Script não dar erro) -->
+<style>
+    body { font-family: 'Montserrat', sans-serif; background: #f8f9fa; }
+    .spinner { 
+        width: 50px; height: 50px; border: 5px solid #f3f3f3; 
+        border-top: 5px solid #000; border-radius: 50%; 
+        animation: spin 1s linear infinite; 
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .card-header-dark { background: #000; color: #fff; border-radius: 10px 10px 0 0 !important; }
+    .qty-badge { width: 110px; display: inline-block; padding: 6px; border-radius: 20px; }
+</style>
+
 <div class="container mt-4">
+    <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-uppercase">📦 Controlo de Estoque</h2>
         <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm">Voltar ao Painel</a>
     </div>
 
-    <!-- Formulário de Cadastro de Peças -->
+    <!-- Formulário de Cadastro -->
     <div class="card shadow-sm border-0 mb-4" style="border-radius: 10px;">
         <div class="card-header card-header-dark p-3">
             <h5 class="mb-0">Adicionar Novo Item ao Inventário</h5>
         </div>
         <div class="card-body p-4">
             <form action="{{ url_for('add_estoque') }}" method="POST" class="row g-3">
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <label class="form-label fw-bold">Descrição da Peça</label>
-                    <input type="text" name="peca" class="form-control" placeholder="Ex: Pastilha de Travão - Brembo" required>
+                    <input type="text" name="peca" class="form-control" placeholder="Ex: Pastilha de Travão" required>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Quantidade Inicial</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Quantidade</label>
                     <input type="number" name="quantidade" class="form-control" placeholder="0" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Preço Unitário (R$)</label>
+                    <input type="number" step="0.01" name="valor" class="form-control" placeholder="0.00" required>
                 </div>
                 <div class="col-12 text-end">
                     <button type="submit" class="btn btn-dark px-5">Registar Peça</button>
@@ -50,7 +69,8 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-4">Item / Material</th>
+                        <th class="ps-4">Produto / Peça</th>
+                        <th>Preço Unitário</th>
                         <th>Quantidade Atual</th>
                         <th class="text-center">Estado</th>
                     </tr>
@@ -58,10 +78,15 @@
                 <tbody>
                     {% for item in estoque %}
                     <tr>
-                        <td class="ps-4 fw-bold text-dark">{{ item.peca }}</td>
+                        <td class="ps-4 fw-bold text-dark">
+                            {{ item.nome if item.nome else item.peca }}
+                        </td>
+                        <td class="text-success fw-bold">
+                            R$ {{ "%.2f"|format(item.valor|default(0)|float) }}
+                        </td>
                         <td>{{ item.quantidade }} unidades</td>
                         <td class="text-center">
-                            {% if item.quantidade < 5 %}
+                            {% if item.quantidade|int < 5 %}
                             <span class="badge bg-danger qty-badge"><i class="bi bi-exclamation-triangle"></i> Baixo</span>
                             {% else %}
                             <span class="badge bg-success qty-badge"><i class="bi bi-check-circle"></i> Disponível</span>
@@ -70,7 +95,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
+                        <td colspan="4" class="text-center py-5 text-muted">
                             <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
                             O estoque da Minha Oficina está vazio.
                         </td>
@@ -85,10 +110,12 @@
 <script>
     window.addEventListener('load', () => {
         const loader = document.getElementById('loader-overlay');
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => { loader.style.display = 'none'; }, 500);
-        }, 400); 
+        if (loader) {
+            setTimeout(() => {
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.display = 'none'; }, 500);
+            }, 400);
+        }
     });
 </script>
 {% endblock %}
