@@ -2,89 +2,138 @@
 
 {% block conteudo %}
 <style>
-    /* Estilo do Loader - Mantido conforme seu padrão */
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
-    .card-header-dark { background: #000; color: #fff; border-radius: 10px 10px 0 0 !important; }
-    .btn-dark-custom { background: #000; border: none; transition: 0.3s; color: #fff; }
-    .btn-dark-custom:hover { background: #333; transform: translateY(-2px); }
+    :root {
+        --accent-color: #000;
+        --bg-light: #f8f9fa;
+        --radius: 12px;
+    }
+
+    .card-header-dark {
+        background: var(--accent-color);
+        color: #fff;
+        border-radius: var(--radius) var(--radius) 0 0 !important;
+    }
+
+    .btn-dark-custom {
+        background: var(--accent-color);
+        border: none;
+        transition: 0.3s;
+        color: #fff;
+        border-radius: 8px;
+    }
+    .btn-dark-custom:hover {
+        background: #333;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 0.6rem 1rem;
+        transition: all 0.2s;
+    }
+    .form-control:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+    }
+
+    /* Ajustes para Mobile */
+    @media (max-width: 576px) {
+        .container { padding: 0 10px; }
+        .btn-dark-custom { width: 100%; margin-top: 10px; }
+        .display-mobile-stack { flex-direction: column; align-items: flex-start !important; }
+        table thead { display: none; }
+        table tr { display: block; margin-bottom: 1rem; border-bottom: 1px solid #eee; }
+        table td { display: flex; justify-content: space-between; padding: 0.5rem; }
+        table td::before { content: attr(data-label); font-weight: bold; color: #555; }
+    }
 </style>
 
-<!-- Loader (Agora com script para fechar) -->
-<div>
-    <p class="mt-2 fw-bold">Acessando a Base de Dados de Clientes...</p>
-</div>
-
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-uppercase">👥 Gestão de Clientes</h2>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm">Voltar ao Painel</a>
+<div class="container py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 display-mobile-stack gap-3">
+        <h2 class="fw-bold text-uppercase mb-0" style="letter-spacing: -1px;">👥 Gestão de Clientes</h2>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-bold">
+            <i class="bi bi-arrow-left me-1"></i> PAINEL
+        </a>
     </div>
 
-    <!-- Formulário de Cadastro -->
-    <div class="card shadow-sm border-0 mb-4" style="border-radius: 10px;">
+    <!-- Formulário -->
+    <div class="card shadow-sm border-0 mb-5" style="border-radius: var(--radius);">
         <div class="card-header card-header-dark p-3">
-            <h5 class="mb-0">Novo Cadastro - Minha Oficina</h5>
+            <h6 class="mb-0 small text-uppercase fw-bold"><i class="bi bi-person-plus me-2"></i>Novo Registro</h6>
         </div>
         <div class="card-body p-4">
             <form action="{{ url_for('add_cliente') }}" method="POST" class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Nome do Cliente</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold text-secondary">NOME COMPLETO</label>
                     <input type="text" name="nome" class="form-control" placeholder="Ex: Maria Silva" required>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Telefone</label>
-                    <input type="text" name="tel" class="form-control" placeholder="(00) 00000-0000" required>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label small fw-bold text-secondary">TELEFONE (WHATSAPP)</label>
+                    <input type="text" name="telefone" id="campo_tel" class="form-control" placeholder="(00) 00000-0000" required>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Documento</label>
-                    <input type="text" name="doc" class="form-control" placeholder="CPF/CNPJ">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label small fw-bold text-secondary">CPF OU CNPJ</label>
+                    <input type="text" name="documento" id="campo_doc" class="form-control" placeholder="000.000.000-00">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">E-mail</label>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold text-secondary">E-MAIL</label>
                     <input type="email" name="email" class="form-control" placeholder="cliente@email.com">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Endereço</label>
-                    <input type="text" name="end" class="form-control" placeholder="Rua, Número, Bairro">
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold text-secondary">ENDEREÇO</label>
+                    <input type="text" name="endereco" class="form-control" placeholder="Rua, Número, Bairro">
                 </div>
-                <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-dark-custom px-5 py-2">Salvar no Banco</button>
+                <div class="col-12 mt-4 text-end">
+                    <button type="submit" class="btn btn-dark-custom px-5 py-2 fw-bold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>SALVAR CLIENTE
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabela de Clientes -->
-    <div class="card shadow-sm border-0" style="border-radius: 10px;">
+    <!-- Tabela -->
+    <div class="card shadow-sm border-0" style="border-radius: var(--radius); overflow: hidden;">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
-                    <tr>
-                        <th class="ps-4">Nome</th>
-                        <th>Contato</th>
-                        <th>Documento</th>
+                    <tr class="small text-uppercase text-secondary">
+                        <th class="ps-4 py-3">Cliente / Contato</th>
+                        <th class="d-none d-md-table-cell">Documento</th>
                         <th class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for cliente in clientes %}
                     <tr>
-                        <td class="ps-4">
+                        <td class="ps-4 py-3" data-label="Cliente / Contato">
                             <div class="fw-bold text-dark">{{ cliente.nome }}</div>
-                            <small class="text-muted">{{ cliente.email }}</small>
+                            <div class="small text-muted">{{ cliente.telefone }}</div>
                         </td>
-                        <td>{{ cliente.telefone }}</td>
-                        <td>{{ cliente.documento }}</td>
-                        <td class="text-center">
-                            <a href="{{ url_for('deletar_cliente', id=cliente.id) }}" 
-                               class="btn btn-sm btn-outline-danger" 
-                               onclick="return confirm('Excluir este cliente?')">Remover</a>
+                        <td class="d-none d-md-table-cell text-secondary small font-monospace" data-label="Documento">{{ cliente.documento }}</td>
+                        <td class="text-center" data-label="Ações">
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="https://wa.me{{ cliente.telefone|replace('(', '')|replace(')', '')|replace('-', '')|replace(' ', '') }}" 
+                                   target="_blank" class="btn btn-sm btn-outline-success border-0" title="Chamar no WhatsApp">
+                                    <i class="bi bi-whatsapp fs-5"></i>
+                                </a>
+                                <a href="{{ url_for('deletar_cliente', id=cliente.id) }}" 
+                                   class="btn btn-sm btn-outline-danger border-0" 
+                                   onclick="return confirm('Deseja excluir este cliente?')">
+                                   <i class="bi bi-trash3 fs-5"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center py-5 text-muted">Nenhum cliente cadastrado.</td>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="bi bi-emoji-smile fs-1 d-block mb-2 opacity-25"></i>
+                            Nenhum cliente por aqui ainda.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -92,16 +141,4 @@
         </div>
     </div>
 </div>
-
-<!-- SCRIPT ESSENCIAL PARA FAZER A PAGINA APARECER -->
-<script>
-    window.addEventListener('load', () => {
-        const loader = document.getElementById('loader-overlay');
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => { loader.style.display = 'none'; }, 500);
-        }, 300); // Tempo curto para não atrasar o usuário
-    });
-</script>
-
 {% endblock %}

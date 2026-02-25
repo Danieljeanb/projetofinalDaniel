@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 # from flask_mysqldb import MySQL
 import mysql.connector
 from dotenv import load_dotenv
@@ -27,36 +27,46 @@ def conectar_banco():
 @app.route('/cadastrar', methods=['GET', 'POST'])
 def cadastro():
     if request.method == 'POST':
-        nome = request.form['nome']
-        email = request.form['email']
-        senha = request.form['senha']
+        nome = request.form.get('nome')
+        email = request.form.get('email')
+        senha = request.form.get('senha')
 
-        conexao = conectar_banco() # Abre conexão
-        cursor = conexao.cursor(dictionary=True)      
-        
-        cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
-        user = cursor.fetchone()
-
-        if user:
-            cursor.close()
-            conexao.close()
-            flash('Este e-mail já está cadastrado!', 'danger')
+        conexao = conectar_banco()
+        if not conexao:
+            flash('Erro ao conectar ao banco de dados', 'danger')
             return redirect(url_for('cadastro'))
 
-        # Note que usei 'senha_hash' para bater com o SQL acima
-        cursor.execute(
-            'INSERT INTO usuarios (nome, email, senha_hash) VALUES (%s,%s,%s)',
-            (nome, email, senha)
-        )
-        conexao.commit() # Salva no banco usando a conexao aberta
-        
-        cursor.close()
-        conexao.close() # Sempre feche
-        
-        flash('Usuário registrado com sucesso!', 'success') 
-        return redirect(url_for('login'))
+        try:
+            cursor = conexao.cursor(dictionary=True)      
+            
+            # 1. Verifica se o e-mail já existe
+            cursor.execute('SELECT * FROM usuarios WHERE email = %s', (email,))
+            user = cursor.fetchone()
 
-    return render_template('cadastro.html')
+            if user:
+                flash('Este e-mail já está cadastrado!', 'danger')
+                return redirect(url_for('cadastro'))
+
+            # 2. Insere o novo usuário
+            # DICA: Em produção, use generate_password_hash(senha) aqui
+            cursor.execute(
+                'INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)',
+                (nome, email, senha)
+            )
+            conexao.commit()
+            flash('Usuário registrado com sucesso!', 'success')
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            print(f"Erro detalhado: {e}") # Isso vai te mostrar o erro no terminal
+            flash('Erro interno ao cadastrar usuário.', 'danger')
+        
+        finally:
+            cursor.close()
+            conexao.close()
+
+    return render_template('cadastro.html') # Verifique se o nome do arquivo está correto
+
 
 def is_user_logged_in():
     """Verifica se o usuário está autenticado na sessão"""
@@ -69,12 +79,13 @@ from flask import session, redirect, url_for, flash
 
 def login_required(f):
    
+    
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Verifica se a chave 'user_id' existe na sessão do navegador
         if 'user_id' not in session:
             flash('Acesso negado! Por favor, faça login para continuar.', 'danger')
-            return redirect(url_for('login_usuario'))
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -83,27 +94,82 @@ def pagamento():
     return render_template('pagamento.html')
 
 
-@app.route('/servicos')
-def gerenciar_os(): # Este nome deve bater com o url_for
+
+@app.route('/servicos', methods=['GET', 'POST'])
+def gerenciar_os():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
+    
     try:
-        cursor.execute("SELECT * FROM ordens_servico")
+        if request.method == 'POST':
+            # Captura de dados do formulário
+            cliente_id = request.form.get('cliente_id')
+            veiculo_id = request.form.get('veiculo_id')
+            
+            # TRATAMENTO DO MECÂNICO: 
+            # Como seu HTML usa <input type="text" name="mecanico">, 
+            # se o seu banco espera um ID (INT), isso daria erro. 
+            # Se sua tabela 'servicos' aceita TEXTO no campo mecanico, use assim:
+            mecanico_nome = request.form.get('mecanico') 
+
+            status = request.form.get('status', 'ABERTA')
+            problema = request.form.get('problema')
+            diagnostico = request.form.get('diagnostico')
+            
+            # Valores (ajuste se tiver esses campos no modal)
+            v_peca = float(request.form.get('valor_peca') or 0)
+            v_servico = float(request.form.get('valor_servico') or 0)
+            v_total = v_peca + v_servico
+
+            sql_insert = """
+                INSERT INTO servicos 
+                (cliente_id, veiculo_id, status, problema_relatado, 
+                 diagnostico_oficina, valor_total_pecas, valor_total_servicos, 
+                 valor_total_geral) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql_insert, (cliente_id, veiculo_id, status, problema, 
+                                       diagnostico, v_peca, v_servico, v_total))
+            conexao.commit()
+            flash('OS aberta com sucesso!', 'success')
+            return redirect(url_for('gerenciar_os'))
+
+        # --- BLOCO GET (LISTAGEM) ---
+        # Note que usei 'c_nome' e 'v_mod' para bater com seu HTML
+        query = """
+            SELECT s.*, 
+                   c.nome AS c_nome, 
+                   v.modelo AS v_mod, 
+                   v.placa
+            FROM servicos s
+            LEFT JOIN clientes c ON s.cliente_id = c.id
+            LEFT JOIN veiculos v ON s.veiculo_id = v.id
+            ORDER BY s.id DESC
+        """
+        cursor.execute(query)
         ordens = cursor.fetchall()
-        sql_clientes = "SELECT * FROM clientes"
-        cursor.execute(sql_clientes)
+
+        cursor.execute("SELECT id, nome FROM clientes")
         clientes = cursor.fetchall()
-        sql_veiculos = "SELECT * FROM veiculos"
-        cursor.execute(sql_veiculos)
+
+        cursor.execute("SELECT id, modelo, placa FROM veiculos")
         veiculos = cursor.fetchall()
-        pecas = cursor.fetchall()
-        return render_template('gerenciar_os.html', ordens=ordens, clientes=clientes, veiculos=veiculos, pecas=pecas)
+
+        return render_template('gerenciar_os.html', 
+                               ordens=ordens, 
+                               clientes=clientes, 
+                               veiculos=veiculos)
+
+    except Exception as e:
+        print(f"Erro: {e}")
+        flash(f"Erro ao processar: {e}", "danger")
+        return redirect(url_for('gerenciar_os'))
     finally:
         cursor.close()
         conexao.close()
-    
-    
+  
 # 
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login_usuario():
@@ -112,32 +178,56 @@ def login_usuario():
         senha = request.form.get('senha')
 
         conexao = conectar_banco()
+        # É boa prática tratar a falha de conexão aqui
+        if not conexao:
+            flash('Erro de conexão com o banco.', 'danger')
+            return redirect(url_for('index'))
+
         cursor = conexao.cursor(dictionary=True)
         
         try:
             cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
             usuario = cursor.fetchone()
 
-            # Verifica se usuário existe e se a senha coincide
-            if usuario and usuario['senha_hash'] == senha:
-                # Aqui você pode adicionar session['user_id'] = usuario['id'] futuramente
+            if usuario and usuario["senha"] == senha:
+                session['user_id'] = usuario['id']
+                session['user_nome'] = usuario['nome']
+                session['user_email'] = usuario['email']
                 flash(f'Bem-vindo, {usuario["nome"]}!', 'success')
                 return redirect(url_for('dashboard'))
             else:
                 flash('E-mail ou senha incorretos!', 'danger')
-                
-        finally:
-            cursor.close()
-            conexao.close()
+                return redirect(url_for('index'))
 
-    return render_template('login.html')
+        except Exception as e:
+            print(f"Erro no login: {e}")
+            flash('Ocorreu um erro durante o login.', 'danger')
+            return redirect(url_for('index'))
+         
+        finally:
+            # Fechar cursor e conexão com segurança
+            if cursor: cursor.close()
+            if conexao: conexao.close()
+
+    # --- O ERRO ESTAVA AQUI ---
+    # Este return deve estar FORA do "if request.method == 'POST'"
+    # Ele serve para carregar a página quando o usuário clica no link de login (GET)
+    return render_template('login.html') 
+
 
 # ------------------- PÁGINAS PRINCIPAIS -------------------
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/logout')
+def Logout():
+    session.clear()  # Limpa todas as variáveis de sessão
+    flash('Você saiu da sua conta com sucesso!', 'info')
+    return render_template('index.html')
+
 @app.route('/dashboard')
+@login_required
 def dashboard():
     # Se quiser passar dados dinâmicos para os cards, faça aqui
     return render_template('dashboard.html', nome=session.get('user_nome'))
@@ -164,16 +254,18 @@ def clientes():
 @app.route('/add_cliente', methods=['POST'])
 def add_cliente():
     nome = request.form.get('nome')
-    documento = request.form.get('documento') # O 'name' no HTML deve ser 'documento'
     telefone = request.form.get('telefone')
+    email = request.form.get('email')
+    documento = request.form.get('documento') # O 'name' no HTML deve ser 'documento'
+    endereco = request.form.get('endereco')
 
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
     try:
         # O erro 1054 acontece EXATAMENTE nesta linha se 'documento' não estiver no banco
-        sql = "INSERT INTO clientes (nome, documento, telefone) VALUES (%s, %s, %s)"
-        cursor.execute(sql, (nome, documento, telefone))
+        sql = "INSERT INTO clientes (nome, telefone, email, documento, endereco) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(sql, (nome, telefone, email, documento, endereco))
         conexao.commit()
         return redirect('/clientes')
     except Exception as e:
@@ -227,7 +319,7 @@ def item():
     
     try:
         # 1. Busca as Ordens de Serviço
-        cursor.execute('SELECT os.*, c.nome as c_nome, v.modelo as v_mod FROM ordens_servico os JOIN clientes c ON os.cliente_id = c.id JOIN veiculos v ON os.veiculo_id = v.id')
+        cursor.execute('SELECT os.*, c.nome as c_nome, v.modelo as v_mod FROM servicos os JOIN clientes c ON os.cliente_id = c.id JOIN veiculos v ON os.veiculo_id = v.id')
         oss = cursor.fetchall()
         
         # 2. Busca a lista de Clientes (agora funciona!)
@@ -260,7 +352,7 @@ def add_ordem_servico():
 
         # Executando o INSERT
         cursor.execute(
-            'INSERT INTO ordens_servico (cliente_id, veiculo_id, descricao, valor) VALUES (%s, %s, %s, %s)',
+            'INSERT INTO servicos (cliente_id, veiculo_id, descricao, valor) VALUES (%s, %s, %s, %s)',
             (cliente_id, veiculo_id, descricao, valor)
         )
         
@@ -283,27 +375,17 @@ def add_ordem_servico():
 def deletar_os(id):
     conexao = conectar_banco()
     cursor = conexao.cursor()
-    
     try:
-        # Comando SQL para deletar pelo ID
-        sql = "DELETE FROM ordens_servico WHERE id = %s"
-        cursor.execute(sql, (id,))
-        
-        # Confirma a alteração no banco de dados
+        cursor.execute("DELETE FROM servicos WHERE id = %s", (id,))
         conexao.commit()
-        
-        # Feedback visual opcional (usando flash messages do Flask)
-        # flash("Ordem de serviço excluída com sucesso!", "success")
-        
+        flash('Ordem de Serviço excluída!', 'success')
     except Exception as e:
-        print(f"Erro ao deletar OS: {e}")
-        # flash("Erro ao tentar excluir a ordem de serviço.", "danger")
+        flash(f'Erro ao excluir: {e}', 'danger')
     finally:
         cursor.close()
         conexao.close()
-    
-    # Redireciona de volta para a página de ordens
-    return redirect(url_for('ordens')) # Certifique-se de que o nome da função da sua rota de listagem é 'ordens'
+    return redirect(url_for('gerenciar_os'))
+
 
 
 # ------------------- ESTOQUE -------------------
@@ -327,39 +409,66 @@ def estoque():
         conexao.close()
 
 
+# @app.route('/estoque')
+# def estoque_lista():
+#     conexao = conectar_banco()
+#     cursor = conexao.cursor(dictionary=True)
+#     # Busca tudo da tabela estoque
+#     cursor.execute("SELECT * FROM estoque")
+#     dados_estoque = cursor.fetchall() 
+#     cursor.close()
+#     conexao.close()
+#     # O nome 'estoque' aqui deve ser o mesmo do {% for item in estoque %}
+#     return render_template('estoque.html', estoque=dados_estoque)
+
+
 @app.route('/add_estoque', methods=['POST'])
 def add_estoque():
     conexao = conectar_banco()
     cursor = conexao.cursor()
     try:
-        cursor.execute(
-            'INSERT INTO estoque (peca, quantidade) VALUES (%s,%s)',
-            (request.form['peca'], request.form['quantidade'])
-        )
+        # 1. Pegamos os dados do formulário HTML (usando os 'names' corretos)
+        nome_peca = request.form.get('peca')
+        qtd = request.form.get('quantidade')
+        preco = request.form.get('valor_venda') # Captura o preço digitado pelo usuário
+
+        # 2. Ajustamos o INSERT para usar a variável 'preco' em vez de 0.00
+        sql = "INSERT INTO estoque (nome, quantidade_estoque, valor_venda) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (nome_peca, qtd, preco)) 
+        
         conexao.commit()
         flash('Item adicionado ao estoque!', 'success')
+        
+    except Exception as e:
+        print(f"Erro ao salvar no banco: {e}")
+        flash('Erro ao salvar no banco.', 'danger')
     finally:
         cursor.close()
         conexao.close()
-    return redirect(url_for('estoque'))
+    
+    # 3. CORREÇÃO DO BUILDERROR: Redireciona para o nome correto da função
+    return redirect(url_for('estoque_lista')) 
+
+
 
 @app.route('/relatorios')
 def relatorios():
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-    try:
-        # A query deve usar o nome EXATO que está no banco
-        query = "SELECT SUM(valor) AS total_vendas, COUNT(*) AS total_os FROM ordens_servico"
-        cursor.execute(query)
-        relatorio = cursor.fetchone()
+    return render_template('relatorios.html')
+    # conexao = conectar_banco()
+    # cursor = conexao.cursor(dictionary=True)
+    # try:
+    #     # A query deve usar o nome EXATO que está no banco
+    #     query = "SELECT SUM(valor) AS total_vendas, COUNT(*) AS total_os FROM ordens_servico"
+    #     cursor.execute(query)
+    #     relatorio = cursor.fetchone()
         
-        return render_template('relatorios.html', dados=relatorio)
-    except Exception as e:
-        print(f"Erro ao gerar relatório: {e}")
-        return f"Erro: {e}", 500
-    finally:
-        cursor.close()
-        conexao.close()
+        
+    # except Exception as e:
+    #     print(f"Erro ao gerar relatório: {e}")
+    #     return f"Erro: {e}", 500
+    # finally:
+    #     cursor.close()
+    #     conexao.close()
 
 #
 
@@ -395,52 +504,41 @@ def add_servico_os(os_id):
         conexao.close()
     return redirect(url_for('detalhes_os', id=os_id))
 
-@app.route('/os/detalhes/<int:id>')
+# Exemplo de como deve ficar sua rota de detalhes corrigida:
+@app.route('/detalhes_os/<int:id>')
 def detalhes_os(id):
     conexao = conectar_banco()
-    # buffered=True é importante para realizar múltiplos SELECTs na mesma conexão
-    cursor = conexao.cursor(dictionary=True, buffered=True)
-    
+    cursor = conexao.cursor(dictionary=True)
     try:
-        # 1. Busca os dados da OS, Cliente e Veículo (JOIN)
-        query_os = """
-            SELECT os.*, c.nome as cliente_nome, v.modelo as veiculo_nome, v.placa 
-            FROM ordens_servico os
-            JOIN clientes c ON os.cliente_id = c.id
-            JOIN veiculos v ON os.veiculo_id = v.id
-            WHERE os.id = %s
+        # Busca os dados da OS unindo com as tabelas de Clientes e Veículos
+        sql = """
+            SELECT s.*, c.nome AS cliente_nome, v.modelo AS veiculo_nome, v.placa 
+            FROM servicos s
+            LEFT JOIN clientes c ON s.cliente_id = c.id
+            LEFT JOIN veiculos v ON s.veiculo_id = v.id
+            WHERE s.id = %s
         """
-        cursor.execute(query_os, (id,))
+        cursor.execute(sql, (id,))
         os_data = cursor.fetchone()
 
         if not os_data:
-            flash("Ordem de Serviço não encontrada!", "danger")
+            flash('Ordem de Serviço não encontrada.', 'danger')
             return redirect(url_for('gerenciar_os'))
 
-        # 2. Busca Peças vinculadas
-        cursor.execute("SELECT * FROM itens_os WHERE os_id = %s", (id,))
-        pecas = cursor.fetchall()
-        
-        # 3. Busca Serviços vinculados
-        cursor.execute("SELECT * FROM servicos_os WHERE os_id = %s", (id,))
-        servicos = cursor.fetchall()
-
-        # 4. Cálculo do Total Geral para o card de destaque
-        total_pecas = sum(p['quantidade'] * p['valor_unitario'] for p in pecas)
-        total_servicos = sum(s['horas'] * s['valor_hora'] for s in servicos)
-        total_geral = total_pecas + total_servicos
-
+        # NOTA: Se você ainda não criou as tabelas de itens, 
+        # enviamos listas vazias para o HTML não quebrar no 'for'
         return render_template('detalhes_os.html', 
                                os=os_data, 
-                               pecas=pecas, 
-                               servicos=servicos, 
-                               total=total_geral)
+                               total=os_data['valor_total_geral'], 
+                               pecas=[], 
+                               servicos=[]) 
     except Exception as e:
-        flash(f"Erro ao carger detalhes: {e}", "danger")
+        print(f"Erro ao carregar OS: {e}")
         return redirect(url_for('gerenciar_os'))
     finally:
         cursor.close()
         conexao.close()
+
 
 @app.route('/login')
 def login(): # O nome desta função deve ser o mesmo que você usa no url_for
@@ -521,6 +619,51 @@ def add_veiculo():
         conexao.close()
         
     return redirect(url_for('veiculos'))
+
+
+
+# Rota para EXIBIR a lista e também RECEBER o formulário (POST)
+@app.route('/estoque', methods=['GET', 'POST'])
+def estoque_lista():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    try:
+        if request.method == 'POST':
+            # Estes nomes vêm do 'name' que está no seu HTML acima
+            nome = request.form.get('peca')
+            qtd = request.form.get('quantidade')
+            valor = request.form.get('valor_venda')
+
+            # Salva no banco (Certifique-se de que as colunas no MySQL são essas)
+            sql = "INSERT INTO estoque (nome, quantidade_estoque, valor_venda) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (nome, qtd, valor))
+            conexao.commit()
+            
+            return redirect(url_for('estoque'))
+
+        # Bloco GET (Listagem)
+        cursor.execute("SELECT * FROM estoque ORDER BY nome ASC")
+        dados = cursor.fetchall()
+        return render_template('estoque.html', estoque=dados)
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+
+# Rota para EXCLUIR
+@app.route('/estoque/excluir/<int:id>')
+def excluir_estoque(id): # Nome único 2
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id = %s", (id,))
+        conexao.commit()
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('estoque'))
+
 
 
 

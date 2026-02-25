@@ -2,69 +2,121 @@
 
 {% block conteudo %}
 <style>
-    .form-container { max-width: 500px; margin: 20px 0; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
-    .status-badge { font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; }
-</style>
-<link href="https://cdn.jsdelivr.net" rel="stylesheet" />
+    :root {
+        --primary-dark: #212529;
+        --accent: #0d6efd;
+        --bg-light: #f8f9fa;
+    }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-uppercase">🛠️ Gerenciar Ordens de Serviço</h2>
-        <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalNovaOS">
-            <i class="bi bi-plus-circle me-2"></i>Nova OS
-        </button>
+    /* Estilização Geral e Cartões */
+    .card-os { 
+        border-radius: 16px; 
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+        background: white;
+    }
+
+    /* Tabela Responsiva "Mobile-First" */
+    @media (max-width: 768px) {
+        .table-responsive-mobile thead { display: none; }
+        .table-responsive-mobile td { 
+            display: block; 
+            text-align: right; 
+            padding: 12px 15px;
+            padding-left: 50%; 
+            position: relative; 
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .table-responsive-mobile td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 15px;
+            width: 45%;
+            font-weight: 700;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            color: #6c757d;
+        }
+        .btn-stack-mobile { width: 100%; margin-top: 10px; }
+        .display-total-mobile { font-size: 1.5rem !important; text-align: center; }
+    }
+
+    .status-badge { font-weight: 600; font-size: 0.75rem; letter-spacing: 0.3px; }
+    .hover-shadow:hover { background-color: #fcfcfc; transition: 0.2s; }
+</style>
+
+<div class="container py-4">
+    <!-- Cabeçalho Principal -->
+    <div class="row align-items-center mb-4 gy-3">
+        <div class="col-12 col-md-6 text-center text-md-start">
+            <h2 class="fw-bold m-0"><i class="bi bi-tools text-primary me-2"></i>Gestão de OS</h2>
+            <p class="text-muted small mb-0">Controle de manutenções e orçamentos</p>
+        </div>
+        <div class="col-12 col-md-6 text-center text-md-end">
+            <button class="btn btn-dark btn-stack-mobile px-4 py-2 rounded-pill shadow fw-bold" data-bs-toggle="modal" data-bs-target="#modalNovaOS">
+                <i class="bi bi-plus-lg me-1"></i> ABRIR NOVA OS
+            </button>
+        </div>
     </div>
 
-    <!-- Tabela de Listagem de OS -->
-    <div class="card shadow-sm border-0" style="border-radius: 12px;">
+    <!-- Tabela de Ordens -->
+    <div class="card card-os border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="ps-4">ID</th>
-                        <th>Data</th>
-                        <th>Cliente / Veículo</th>
-                        <th>Status</th>
-                        <th>Mecânico</th>
-                        <th>Total (R$)</th>
-                        <th class="text-center">Ações</th>
+            <table class="table table-hover align-middle mb-0 table-responsive-mobile">
+                <thead class="bg-light">
+                    <tr class="text-secondary small">
+                        <th class="ps-4">ID / DATA</th>
+                        <th>CLIENTE & VEÍCULO</th>
+                        <th>STATUS</th>
+                        <th class="d-none d-lg-table-cell">MECÂNICO</th>
+                        <th>VALOR TOTAL</th>
+                        <th class="text-center pe-4">AÇÕES</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for o in ordens %}
-                    <tr>
-                        <td class="ps-4 fw-bold">#{{ o.id }}</td>
-                        <td>{{ o.data_abertura.strftime('%d/%m/%Y %H:%M') if o.data_abertura else '--' }}</td>
-                        <td>
-                            <div class="fw-bold">{{ o.cliente_nome }}</div>
-                            <small class="text-muted">{{ o.veiculo_nome }} ({{ o.placa }})</small>
+                    <tr class="hover-shadow">
+                        <td class="ps-4" data-label="ID/Data">
+                            <span class="fw-bold text-dark">#{{ o.id }}</span><br>
+                            <small class="text-muted">{{ o.data_abertura.strftime('%d/%m/%Y') if o.data_abertura else '--' }}</small>
                         </td>
-                        <td>
-                            <span class="badge 
+                        <td data-label="Cliente/Veículo">
+                            <div class="fw-bold text-dark">{{ o.c_nome }}</div>
+                            <div class="small text-muted">{{ o.v_mod }} ({{ o.placa }})</div>
+                        </td>
+                        <td data-label="Status">
+                            <span class="badge rounded-pill status-badge 
                                 {% if o.status == 'ABERTA' %}bg-warning text-dark
                                 {% elif o.status == 'EM_ANDAMENTO' %}bg-primary
+                                {% elif o.status == 'AGUARDANDO_PEÇAS' %}bg-info text-dark
                                 {% elif o.status == 'CONCLUÍDA' %}bg-success
                                 {% elif o.status == 'CANCELADA' %}bg-danger
-                                {% else %}bg-secondary{% endif %}">
-                                {{ o.status }}
+                                {% else %}bg-secondary text-white{% endif %}">
+                                {{ o.status.replace('_', ' ') }}
                             </span>
                         </td>
-                        <td>{{ o.mecanico_designado or '---' }}</td>
-                        <td class="fw-bold text-success">R$ {{ "%.2f"|format(o.valor_total or 0) }}</td>
-                        <td class="text-center">
-                            <a href="{{ url_for('detalhes_os', id=o.id) }}" class="btn btn-sm btn-outline-dark">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="{{ url_for('deletar_os', id=o.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir esta OS?')">
-                                <i class="bi bi-trash"></i>
-                            </a>
+                        <td class="d-none d-lg-table-cell text-secondary" data-label="Mecânico">
+                            {{ o.mecanico_nome or 'Não atribuído' }}
+                        </td>
+                        <td data-label="Total">
+                            <span class="fw-bold text-dark">R$ {{ "%.2f"|format(o.valor_total_geral or 0) }}</span>
+                        </td>
+                        <td class="text-center pe-4" data-label="Ações">
+                            <div class="btn-group">
+                                <a href="{{ url_for('detalhes_os', id=o.id) }}" class="btn btn-sm btn-outline-secondary border-0" title="Ver Detalhes">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                                <a href="{{ url_for('deletar_os', id=o.id) }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Deseja excluir permanentemente?')" title="Excluir">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">Nenhuma Ordem de Serviço cadastrada.</td>
+                        <td colspan="6" class="text-center py-5 text-muted">Nenhum registro encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -73,95 +125,146 @@
     </div>
 </div>
 
-<!-- Modal Nova OS -->
+<!-- Modal Nova OS Corrigido -->
 <div class="modal fade" id="modalNovaOS" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <form action="{{ url_for('gerenciar_os') }}" method="POST" class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">🛠️ Abrir Nova Ordem de Serviço</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <!-- Busca de Cliente -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Cliente</label>
-                            <select name="cliente_id" id="cliente_id" class="form-select select2-busca" required>
-                                <option value="">Digite o nome do cliente...</option>
-                                {% for c in clientes %}
-                                <option value="{{ c.id }}">{{ c.nome }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form action="{{ url_for('gerenciar_os') }}" method="POST" class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white border-0 py-3">
+                <h5 class="modal-title fw-bold ms-3"><i class="bi bi-file-earmark-plus me-2"></i>NOVA ORDEM DE SERVIÇO</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <!-- Cliente e Veículo -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted">CLIENTE</label>
+                        <select name="cliente_id" class="form-select border-0 bg-light py-2" required>
+                            <option value="">Selecione o cliente...</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}">{{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted">VEÍCULO</label>
+                        <select name="veiculo_id" class="form-select border-0 bg-light py-2" required>
+                            <option value="">Selecione o veículo...</option>
+                            {% for v in veiculos %}
+                            <option value="{{ v.id }}">{{ v.modelo }} ({{ v.placa }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                        <!-- Veículo Filtrado -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Veículo</label>
-                            <select name="veiculo_id" id="veiculo_id" class="form-select select2-busca" required disabled>
-                                <option value="">Selecione o cliente primeiro...</option>
-                            </select>
-                        </div>
+                    <!-- Mecânico e Status -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Mecânico Responsável</label>
+                        <input type="text" name="mecanico" class="form-control border-0 bg-light py-2" placeholder="Quem irá realizar o serviço?" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Status da OS</label>
+                        <select name="status" class="form-select border-0 bg-light py-2">
+                            <option value="ABERTA">ABERTA</option>
+                            <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                            <option value="AGUARDANDO_PEÇAS">AGUARDANDO PEÇAS</option>
+                            <option value="CONCLUÍDA">CONCLUÍDA</option>
+                            <option value="CANCELADA">CANCELADA</option>
+                        </select>
+                    </div>
 
-                        <hr class="my-4">
+                    <!-- Detalhamento Técnico -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Problema Relatado (Cliente)</label>
+                        <textarea name="problema" class="form-control border-0 bg-light" rows="2" placeholder="O que o cliente relatou?"></textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Diagnóstico da Oficina</label>
+                        <textarea name="diagnostico" class="form-control border-0 bg-light" rows="2" placeholder="O que foi identificado pelo técnico?"></textarea>
+                    </div>
 
-                        <!-- Financeiro -->
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-primary">Peça (R$)</label>
-                            <input type="number" step="0.01" id="v_peca" name="valor_peca" class="form-control calc-total" value="0.00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-success">Mão de Obra (R$)</label>
-                            <input type="number" step="0.01" id="v_serv" name="valor_servico" class="form-control calc-total" value="0.00" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-danger">Total Estimado</label>
-                            <div class="h4 mt-1" id="total_display">R$ 0,00</div>
-                        </div>
+                    <div class="col-12"><hr class="my-2 opacity-5"></div>
 
-                        <!-- ... (resto dos seus campos de mecanico, problema, etc) -->
+                    <!-- Financeiro -->
+                    <div class="col-6 col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Peças (R$)</label>
+                        <input type="number" step="0.01" id="v_peca" name="valor_peca" class="form-control border-0 bg-light py-2" value="0.00">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Serviço (R$)</label>
+                        <input type="number" step="0.01" id="v_serv" name="valor_servico" class="form-control border-0 bg-light py-2" value="0.00">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 bg-primary-subtle rounded-3 text-center">
+                            <label class="form-label fw-bold small text-primary mb-0">TOTAL CALCULADO</label>
+                            <div class="h3 fw-bold text-primary mb-0" id="total_display">R$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Observações Gerais</label>
+                        <textarea name="observacoes" class="form-control border-0 bg-light" rows="2"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-dark px-4">Salvar Ordem de Serviço</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow">SALVAR ORDEM DE SERVIÇO</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- SCRIPTS DE MELHORIA -->
-<script src="https://code.jquery.com"></script>
-<script src="https://cdn.jsdelivr.net"></script>
+<!-- Lógica de Cálculo Automático -->
+<script>
+    // Lógica de cálculo automático
+    const inputPeca = document.getElementById('v_peca');
+    const inputServ = document.getElementById('v_serv');
+    const displayTotal = document.getElementById('total_display');
 
+    function calcular() {
+        const p = parseFloat(inputPeca.value) || 0;
+        const s = parseFloat(inputServ.value) || 0;
+        const total = p + s;
+        displayTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
+
+    inputPeca.addEventListener('input', calcular);
+    inputServ.addEventListener('input', calcular);
+</script>
+
+<!-- Scripts Integrados -->
+<script src="https://code.jquery.com"></script>
 <script>
 $(document).ready(function() {
-    // 1. Iniciar Busca rápida
-    $('.select2-busca').select2({
-        dropdownParent: $('#modalNovaOS'),
-        width: '100%'
+    
+    // 1. CÁLCULO AUTOMÁTICO DO TOTAL
+    $('.calc-input').on('input', function() {
+        let peca = parseFloat($('#v_peca').val()) || 0;
+        let serv = parseFloat($('#v_serv').val()) || 0;
+        let total = peca + serv;
+        
+        // Formata para moeda brasileira
+        $('#total_display').text(total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
     });
 
-    // 2. Filtro de Veículos por Cliente
+    // 2. BUSCA DINÂMICA DE VEÍCULOS (AJAX)
     $('#cliente_id').on('change', function() {
-        var cliente_id = $(this).val();
-        var $veiculoSelect = $('#veiculo_id');
+        const clienteId = $(this).val();
+        const $veiculoSelect = $('#veiculo_id');
 
-        if (cliente_id) {
-            $.getJSON('/get_veiculos/' + cliente_id, function(data) {
-                $veiculoSelect.empty().append('<option value="">Selecione o Veículo...</option>');
+        if (clienteId) {
+            // Ajuste a URL abaixo conforme sua rota de API no backend
+            $.getJSON(`/get_veiculos/${clienteId}`, function(data) {
+                $veiculoSelect.empty().append('<option value="">Selecione o Veículo...</option>').prop('disabled', false);
                 $.each(data, function(i, v) {
-                    $veiculoSelect.append('<option value="'+v.id+'">'+v.modelo+' ('+v.placa+')</option>');
+                    $veiculoSelect.append(`<option value="${v.id}">${v.modelo} (${v.placa})</option>`);
                 });
-                $veiculoSelect.prop('disabled', false);
+            }).fail(function() {
+                alert("Erro ao carregar veículos.");
             });
+        } else {
+            $veiculoSelect.empty().append('<option value="">Aguardando cliente...</option>').prop('disabled', true);
         }
-    });
-
-    // 3. Cálculo de Total em tempo real
-    $('.calc-total').on('input', function() {
-        var p = parseFloat($('#v_peca').val()) || 0;
-        var s = parseFloat($('#v_serv').val()) || 0;
-        $('#total_display').text('R$ ' + (p + s).toLocaleString('pt-BR', {minimumFractionDigits: 2}));
     });
 });
 </script>

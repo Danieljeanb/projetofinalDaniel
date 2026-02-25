@@ -1,27 +1,148 @@
-{% extends 'base.html'%}
+{% extends 'base.html' %}
 
+{% block conteudo %}
+<div class="container-fluid container-md py-4 py-md-5 animate-in">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            
+            <!-- Cabeçalho Estruturado -->
+            <div class="d-flex flex-column flex-md-row align-items-center mb-4 text-center text-md-start">
+                <div class="bg-dark text-white rounded-4 p-3 mb-3 mb-md-0 me-md-4 shadow-sm">
+                    <i class="bi bi-car-front-fill fs-2"></i>
+                </div>
+                <div>
+                    <h2 class="fw-black text-dark mb-1" style="letter-spacing: -1px;">GESTÃO DE FROTA</h2>
+                    <p class="text-muted mb-0">Registre os veículos e vincule-os ao histórico do cliente.</p>
+                </div>
+            </div>
 
-<main>
-  <h1>Cadastro de veiculo</h1>
+            <form action="{{ url_for('add_veiculo') }}" method="POST" id="formVeiculos">
+                <!-- Card Principal -->
+                <div class="card border-0 shadow-lg p-3 p-md-4 mb-4" style="border-radius: 1.5rem; background: #fff;">
+                    
+                    <div id="container-veiculos">
+                        <!-- Item do Veículo -->
+                        <div class="veiculo-item p-3 p-md-4 mb-4 bg-light rounded-4 border border-white shadow-sm position-relative">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="badge bg-primary px-3 py-2 rounded-pill">VEÍCULO #1</span>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <div class="col-12 col-md-5 col-lg-4">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase" style="font-size: 0.7rem;">Modelo / Versão</label>
+                                    <input type="text" name="modelo[]" class="form-control border-0 shadow-sm py-2 py-md-3 px-3" placeholder="Ex: Corolla XEi" required>
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase" style="font-size: 0.7rem;">Placa (Mercosul/Antiga)</label>
+                                    <input type="text" name="placa[]" class="form-control border-0 shadow-sm py-2 py-md-3 px-3 placa-mask" placeholder="AAA-0A00" style="text-transform: uppercase;" required>
+                                </div>
+                                <div class="col-6 col-sm-3 col-md-3 col-lg-2">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase" style="font-size: 0.7rem;">Ano</label>
+                                    <input type="number" name="ano[]" class="form-control border-0 shadow-sm py-2 py-md-3 px-3" min="1950" max="2030" placeholder="2024" required>
+                                </div>
+                                <div class="col-6 col-sm-3 col-md-12 col-lg-3">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase" style="font-size: 0.7rem;">Marca / Fabricante</label>
+                                    <input type="text" name="marca[]" class="form-control border-0 shadow-sm py-2 py-md-3 px-3" placeholder="Ex: Toyota">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-secondary text-uppercase" style="font-size: 0.7rem;">Observações Técnicas</label>
+                                    <textarea name="obs[]" class="form-control border-0 shadow-sm px-3" rows="2" placeholder="Ex: Carro de único dono, revisões em dia..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    <fieldset>
-      <legend>Veículos</legend>
-      <div id="veiculos">
-        <div class="veiculo">
-          <label for="veiculo_modelo_1">Modelo:</label>
-          <input type="text" id="veiculo_modelo_1" name="veiculos[0][modelo]" required>
-          <label for="veiculo_placa_1" style="margin-left: 10px;">Placa:</label>
-          <input type="text" id="veiculo_placa_1" name="veiculos[0][placa]" required>
-          <label for="veiculo_ano_1" style="margin-left: 10px;">Ano:</label>
-          <input type="number" id="veiculo_ano_1" name="veiculos[0][ano]" min="1900" max="2099" step="1" required>
+                    <!-- Adicionar Outro (Responsivo) -->
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-dark w-100 w-md-auto px-5 py-3 rounded-pill fw-bold transition-all" onclick="adicionarVeiculo()">
+                            <i class="bi bi-plus-lg me-2"></i>ADICIONAR OUTRO VEÍCULO
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ações Finais -->
+                <div class="d-flex flex-column-reverse flex-md-row justify-content-md-between align-items-center gap-3">
+                    <a href="{{ url_for('dashboard') }}" class="text-muted text-decoration-none small fw-bold"> <i class="bi bi-arrow-left me-1"></i> CANCELAR E VOLTAR</a>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 w-md-auto px-5 py-3 fw-bold shadow rounded-4">
+                        FINALIZAR E SALVAR <i class="bi bi-check-lg ms-2"></i>
+                    </button>
+                </div>
+            </form>
         </div>
-      </div>
-      <button type="button" onclick="adicionarVeiculo()">Adicionar outro veículo</button>
-    </fieldset>
-    
-    <br>
-    <button type="submit">Salvar Cadastro</button>
-  </form>
-</main>
+    </div>
+</div>
 
+<style>
+    body { background-color: #f8fafc; }
+    .animate-in { animation: fadeInUp 0.6s ease-out; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .form-control { border-radius: 12px; transition: all 0.2s; }
+    .form-control:focus { background-color: #fff !important; box-shadow: 0 8px 20px rgba(0,0,0,0.05) !important; border: 1px solid #dee2e6 !important; }
+    
+    .transition-all:hover { background-color: #000; color: #fff; transform: scale(1.02); }
+    
+    /* Layout Mobile-First */
+    @media (max-width: 576px) {
+        .badge { font-size: 0.7rem; }
+        h2 { font-size: 1.4rem; }
+        .card { padding: 1rem !important; }
+    }
+</style>
+
+<!-- Scripts: Máscara e Dinâmica -->
+<script src="https://cdnjs.cloudflare.com"></script>
+<script>
+    let contador = 1;
+
+    // Aplica máscara de placa (Padrão Mercosul e Antigo)
+    function aplicarMascaras() {
+        const inputs = document.querySelectorAll('.placa-mask');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (val.length > 3) val = val.slice(0,3) + '-' + val.slice(3,7);
+                input.value = val;
+            });
+        });
+    }
+
+    function adicionarVeiculo() {
+        contador++;
+        const container = document.getElementById('container-veiculos');
+        const div = document.createElement('div');
+        div.className = 'veiculo-item p-3 p-md-4 mb-4 bg-light rounded-4 border border-white shadow-sm position-relative animate-in';
+        
+        div.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <span class="badge bg-primary px-3 py-2 rounded-pill">VEÍCULO #${contador}</span>
+                <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none" onclick="this.closest('.veiculo-item').remove()">
+                    <i class="bi bi-trash3-fill me-1"></i> REMOVER
+                </button>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-md-5 col-lg-4">
+                    <label class="form-label small fw-bold text-secondary">MODELO / VERSÃO</label>
+                    <input type="text" name="modelo[]" class="form-control border-0 shadow-sm py-2 py-md-3" required>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label class="form-label small fw-bold text-secondary">PLACA</label>
+                    <input type="text" name="placa[]" class="form-control border-0 shadow-sm py-2 py-md-3 placa-mask" style="text-transform: uppercase;" required>
+                </div>
+                <div class="col-6 col-sm-3 col-md-3 col-lg-2">
+                    <label class="form-label small fw-bold text-secondary">ANO</label>
+                    <input type="number" name="ano[]" class="form-control border-0 shadow-sm py-2 py-md-3" min="1950" max="2030" required>
+                </div>
+                <div class="col-6 col-sm-3 col-md-12 col-lg-3">
+                    <label class="form-label small fw-bold text-secondary">MARCA</label>
+                    <input type="text" name="marca[]" class="form-control border-0 shadow-sm py-2 py-md-3">
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+        aplicarMascaras();
+    }
+
+    window.onload = aplicarMascaras;
+</script>
 {% endblock %}

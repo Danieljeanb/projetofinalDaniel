@@ -1,36 +1,159 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-  <div class="container mt-5">
-    <h2 class="mb-4">Cadastro de Usuário</h2>
+<!-- Google Fonts para um ar mais moderno -->
+<link href="https://fonts.googleapis.com" rel="stylesheet">
 
-    <!-- Mensagens de feedback -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+<div class="container-fluid py-4 py-md-5 animate-in">
+    <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+        <!-- Coluna adaptável: 12 no celular, 8 no tablet, 4 no desktop largo -->
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-4">
+            
+            <!-- Card com Design Glassmorphism sutil e bordas suaves -->
+            <div class="card border-0 shadow-lg card-auth" style="border-radius: 1.25rem; background: #ffffff;">
+                <div class="card-body p-4 p-md-5">
+                    
+                    <!-- Cabeçalho do Card -->
+                    <div class="text-center mb-4">
+                        <div class="brand-logo mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-dark text-white rounded-circle" style="width: 60px; height: 60px;">
+                                <i class="bi bi-tools fs-3"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold text-dark mb-1" style="letter-spacing: -0.5px;">Criar Conta</h3>
+                        <p class="text-muted small">Junte-se à maior rede de gestão automotiva</p>
+                    </div>
 
-    <form action="{{ url_for('cadastro') }}" method="POST">
-      <div class="mb-3">
-        <label class="form-label">Nome</label>
-        <input type="text" name="nome" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">E-mail</label>
-        <input type="email" name="email" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Senha</label>
-        <input type="password" name="senha" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-dark">Cadastrar</button>
-      <a href="{{ url_for('login') }}" class="btn btn-outline-secondary">Já tenho conta</a>
-    </form>
-  </div>
+                    <!-- Alertas Flash Personalizados -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                      {% if messages %}
+                        {% for category, message in messages %}
+                          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show border-0 small mb-4" role="alert" style="border-radius: 10px; background-color: #f8f9fa;">
+                            <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                          </div>
+                        {% endfor %}
+                      {% endif %}
+                    {% endwith %}
+
+                    <!-- Formulário -->
+                    <form action="{{ url_for('cadastro') }}" method="POST" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-uppercase text-muted" style="font-size: 0.7rem;">Nome Completo</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light"><i class="bi bi-person text-muted"></i></span>
+                                <input type="text" name="nome" class="form-control border-0 bg-light py-2 py-md-3" placeholder="Ex: João Silva" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-uppercase text-muted" style="font-size: 0.7rem;">E-mail Profissional</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light"><i class="bi bi-envelope text-muted"></i></span>
+                                <input type="email" name="email" class="form-control border-0 bg-light py-2 py-md-3" placeholder="joao@oficina.com" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold text-uppercase text-muted" style="font-size: 0.7rem;">Senha de Acesso</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light"><i class="bi bi-shield-lock text-muted"></i></span>
+                                <input type="password" name="senha" class="form-control border-0 bg-light py-2 py-md-3" placeholder="••••••••" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-dark py-3 fw-bold btn-submit shadow-sm">
+                                COMEÇAR AGORA
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="small text-muted mb-0">Já possui uma conta? 
+                            <a href="{{ url_for('login_usuario') }}" class="text-dark fw-bold text-decoration-none border-bottom border-dark border-2 pb-1">Entrar aqui</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rodapé da página -->
+            <div class="text-center mt-4 opacity-50">
+                <p class="small">&copy; 2026 Minha Oficina Pro. Sistema de Alta Performance.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* RESET E TIPOGRAFIA */
+    :root {
+        --font-main: 'Inter', sans-serif;
+    }
+
+    body {
+        font-family: var(--font-main);
+        background-color: #f4f7f6; /* Tom cinza azulado profissional */
+    }
+
+    /* ANIMAÇÃO DE ENTRADA */
+    .animate-in {
+        animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ESTILIZAÇÃO DOS CAMPOS */
+    .input-group-text {
+        border-radius: 12px 0 0 12px !important;
+    }
+
+    .form-control {
+        border-radius: 0 12px 12px 0 !important;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background-color: #fff !important;
+        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04) !important;
+        color: #000;
+    }
+
+    /* BOTÃO COM EFEITO DE ELEVAÇÃO */
+    .btn-submit {
+        border-radius: 12px;
+        letter-spacing: 0.5px;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-submit:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+        background-color: #222;
+    }
+
+    /* RESPONSIVIDADE PARA CELULAR E TABLET */
+    @media (max-width: 768px) {
+        .card-auth {
+            border-radius: 1rem;
+        }
+        .card-body {
+            padding: 2rem !important;
+        }
+        h3 { font-size: 1.5rem; }
+    }
+
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding-top: 2rem !important;
+        }
+        .btn-submit {
+            padding: 1rem !important;
+        }
+    }
+</style>
 {% endblock %}

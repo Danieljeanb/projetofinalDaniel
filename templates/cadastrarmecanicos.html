@@ -1,173 +1,172 @@
-{% extends 'base.html'%}
+{% extends 'base.html' %}
 
 {% block conteudo %}
-
 <style>
+    :root {
+        --primary-blue: #0d6efd;
+        --soft-bg: #f8fafc;
+        --border-radius: 16px;
+    }
 
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-  background-color: #f9f9f9;
-  color: #333;
-}
+    .animate-in { animation: fadeInUp 0.5s ease-out forwards; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-header h1 {
-  text-align: center;
-  color: #2c3e50;
-}
+    /* Cards de Produtividade */
+    .card-kpi {
+        border: none;
+        border-radius: var(--border-radius);
+        background: #fff;
+        transition: transform 0.2s;
+    }
+    .card-kpi:hover { transform: translateY(-5px); }
 
-section {
-  margin-bottom: 30px;
-  padding: 15px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+    .card-os { border: none; border-radius: var(--border-radius); background: #fff; }
 
-h2 {
-  color: #34495e;
-  margin-bottom: 15px;
-}
-
-form fieldset {
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 15px;
-}
-
-label {
-  font-weight: bold;
-}
-
-input, select {
-  padding: 8px;
-  margin-top: 5px;
-  width: 100%;
-  max-width: 400px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  background-color: #3498db;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #2980b9;
-}
-
-.tabela-mecanicos {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-
-.tabela-mecanicos th, .tabela-mecanicos td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: left;
-}
-
-.tabela-mecanicos th {
-  background-color: #3498db;
-  color: white;
-}
-
-.tabela-mecanicos tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
-
+    /* Tabela "Stack" para Mobile */
+    @media (max-width: 991px) {
+        .tabela-mecanicos thead { display: none; }
+        .tabela-mecanicos tr {
+            display: block; margin-bottom: 1rem; border: 1px solid #e2e8f0;
+            border-radius: 12px; padding: 10px; background: #fff;
+        }
+        .tabela-mecanicos td {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 15px; border-bottom: 1px solid #f1f5f9;
+        }
+        .tabela-mecanicos td:last-child { border-bottom: none; }
+        .tabela-mecanicos td::before {
+            content: attr(data-label); font-weight: 700; color: #64748b;
+            text-transform: uppercase; font-size: 0.75rem;
+        }
+    }
 </style>
 
-    <header>
-      <h1>Gerenciar Mecânicos</h1>
+<div class="container-fluid px-3 px-md-5 py-4 animate-in">
+    <!-- Cabeçalho -->
+    <header class="mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-person-badge-fill me-2 text-primary"></i>EQUIPE E PRODUTIVIDADE</h2>
+            <p class="text-muted small mb-0">Monitore o desempenho técnico e gerencie atribuições.</p>
+        </div>
+        <div class="d-print-none">
+            <button onclick="window.print()" class="btn btn-outline-dark btn-sm rounded-pill px-3">
+                <i class="bi bi-printer me-1"></i> Imprimir Mapa
+            </button>
+        </div>
     </header>
-  
-    <!-- Formulário de cadastro -->
-    <section>
-      <h2>Cadastrar novo mecânico</h2>
-      <form method="post" action="/cadastrar_mecanico">
-        <fieldset>
-          <legend>Dados do Mecânico</legend>
-  
-          <label for="nome_mecanico">Nome:</label>
-          <input type="text" id="nome_mecanico" name="nome" required>
-  
-          <br><br>
-  
-          <label for="especialidade_mecanico">Especialidade (opcional):</label>
-          <input type="text" id="especialidade_mecanico" name="especialidade">
-        </fieldset>
-  
-        <br>
-        <button type="submit">Salvar Mecânico</button>
-      </form>
-    </section>
-  
-    <!-- Lista de mecânicos -->
-    <section>
-      <h2>Lista de Mecânicos</h2>
-      <table class="tabela-mecanicos">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Especialidade</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if mecanicos %}
-            {% for mecanico in mecanicos %}
-            <tr>
-              <td>{{ mecanico.nome }}</td>
-              <td>{{ mecanico.especialidade if mecanico.especialidade else '---' }}</td>
-            </tr>
-            {% endfor %}
-          {% else %}
-            <tr>
-              <td colspan="2"><em>Nenhum mecânico cadastrado.</em></td>
-            </tr>
-          {% endif %}
-        </tbody>
-      </table>
-    </section>
-  
-    <!-- Atribuição de OS -->
-    <section>
-      <h2>Atribuir Ordem de Serviço a um Mecânico</h2>
-      <form method="post" action="/atribuir_os">
-        <fieldset>
-          <legend>Atribuição</legend>
-  
-          <label for="os_id">Ordem de Serviço:</label>
-          <select id="os_id" name="os_id" required>
-            <option value="">Selecione a OS</option>
-            {% for os in ordens_servico %}
-              <option value="{{ os.id }}">{{ os.descricao }}</option>
-            {% endfor %}
-          </select>
-  
-          <br><br>
-  
-          <label for="mecanico_id">Mecânico:</label>
-          <select id="mecanico_id" name="mecanico_id" required>
-            <option value="">Selecione o mecânico</option>
-            {% for mecanico in mecanicos %}
-              <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
-            {% endfor %}
-          </select>
-  
-          <br><br>
-          <button type="submit">Atribuir</button>
-        </fieldset>
-      </form>
-    </section>
-  </main>
 
+    <!-- MAPA DE PRODUTIVIDADE (RESUMO) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card card-kpi shadow-sm p-3 border-start border-primary border-4">
+                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Total de Mecânicos</small>
+                <h3 class="fw-bold mb-0">{{ mecanicos|length }}</h3>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-kpi shadow-sm p-3 border-start border-success border-4">
+                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Serviços Atribuídos</small>
+                <h3 class="fw-bold mb-0">{{ ordens_servico|length }}</h3>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card card-kpi shadow-sm p-3 border-start border-warning border-4">
+                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Média de OS / Técnico</small>
+                {% set media = (ordens_servico|length / mecanicos|length) if mecanicos|length > 0 else 0 %}
+                <h3 class="fw-bold mb-0">{{ "%.1f"|format(media) }}</h3>
+            </div>
+        </div>
+    </div>
+  
+    <div class="row g-4">
+        <!-- FORMULÁRIOS -->
+        <div class="col-12 col-lg-4 order-2 order-lg-1">
+            <section class="card card-os p-4 shadow-sm mb-4">
+                <h5 class="fw-bold mb-3 text-primary small text-uppercase"><i class="bi bi-plus-circle me-2"></i>Novo Mecânico</h5>
+                <form method="post" action="/cadastrar_mecanico">
+                    <input type="text" name="nome" class="form-control mb-3 py-2" placeholder="Nome Completo" required>
+                    <input type="text" name="especialidade" class="form-control mb-3 py-2" placeholder="Especialidade">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">SALVAR</button>
+                </form>
+            </section>
 
+            <section class="card card-os p-4 shadow-sm">
+                <h5 class="fw-bold mb-3 text-success small text-uppercase"><i class="bi bi-link-45deg me-2"></i>Vincular OS</h5>
+                <form method="post" action="/atribuir_os">
+                    <select name="os_id" class="form-select mb-3 py-2" required>
+                        <option value="" disabled selected>Selecione a OS...</option>
+                        {% for os in ordens_servico %}
+                            <option value="{{ os.id }}">#{{ os.id }} - {{ os.descricao }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="mecanico_id" class="form-select mb-3 py-2" required>
+                        <option value="" disabled selected>Selecione o Mecânico...</option>
+                        {% for mecanico in mecanicos %}
+                            <option value="{{ mecanico.id }}">{{ mecanico.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm">ATRIBUIR</button>
+                </form>
+            </section>
+        </div>
 
+        <!-- LISTAGEM E PRODUTIVIDADE -->
+        <div class="col-12 col-lg-8 order-1 order-lg-2">
+            <section class="card card-os shadow-sm h-100 overflow-hidden">
+                <div class="p-3 bg-white border-bottom d-flex align-items-center">
+                    <i class="bi bi-search text-muted me-2"></i>
+                    <input type="text" id="filtroMecanicos" class="form-control border-0 shadow-none" placeholder="Pesquisar mecânico...">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 tabela-mecanicos">
+                        <thead class="table-light">
+                            <tr class="small text-uppercase text-secondary">
+                                <th class="ps-4">Técnico</th>
+                                <th>Especialidade</th>
+                                <th class="text-center">Produtividade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaMecanicos">
+                            {% for mecanico in mecanicos %}
+                            <tr class="item-mecanico">
+                                <td class="ps-4 py-3" data-label="Técnico">
+                                    <div class="fw-bold text-dark">{{ mecanico.nome }}</div>
+                                </td>
+                                <td data-label="Especialidade">
+                                    <span class="badge bg-light text-dark border px-3">{{ mecanico.especialidade|default('Geral') }}</span>
+                                </td>
+                                <td class="text-center" data-label="Produtividade">
+                                    <!-- Mapa de Carga de Trabalho -->
+                                    {% set carga = 0 %}
+                                    {% for os in ordens_servico if os.mecanico_id == mecanico.id %}{% set carga = carga + 1 %}{% endfor %}
+                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                        <div class="progress flex-grow-1 d-none d-md-flex" style="height: 8px; min-width: 80px;">
+                                            {% set width = (carga * 20) if carga < 5 else 100 %}
+                                            {% set bg_color = '#dc3545' if carga > 5 else '#198754' %}
+                                        </div>
+                                        <span class="fw-bold {{ 'text-danger' if carga > 5 else 'text-primary' }}">{{ carga }} OS</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center py-5 text-muted">Nenhum registro.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Filtro Dinâmico
+    document.getElementById('filtroMecanicos').addEventListener('input', function() {
+        const busca = this.value.toLowerCase();
+        document.querySelectorAll('.item-mecanico').forEach(item => {
+            item.style.display = item.textContent.toLowerCase().includes(busca) ? '' : 'none';
+        });
+    });
+</script>
 {% endblock %}

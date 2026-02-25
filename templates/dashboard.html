@@ -1,36 +1,130 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<h2 class="mb-4 fw-bold">Resumo da Oficina 🛠️</h2>
+<div class="container-fluid py-4 animate-in">
+    <!-- Cabeçalho com Ações Rápidas -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3 d-print-none">
+        <div>
+            <h2 class="fw-black text-dark mb-0" style="font-weight: 900; letter-spacing: -1.5px;">CENTRAL ESTRATÉGICA 🛠️</h2>
+            <p class="text-muted small mb-0">Gestão em tempo real • Computador, Tablet e Celular</p>
+        </div>
+        <div class="d-flex gap-2 w-100 w-md-auto">
+            <!-- BOTÃO WHATSAPP DINÂMICO -->
+            <button onclick="enviarWhatsapp()" class="btn btn-success px-4 py-2 rounded-pill shadow-sm fw-bold">
+                <i class="bi bi-whatsapp me-2"></i>Enviar p/ Gestor
+            </button>
+            <button onclick="window.print()" class="btn btn-dark px-4 py-2 rounded-pill shadow-sm">
+                <i class="bi bi-file-pdf me-2"></i>PDF
+            </button>
+        </div>
+    </div>
 
-<div class="row">
-    <!-- Card de Ações Rápidas -->
+    <!-- CARDS DE ÍNDICES (MENSAL, SEMANAL E SERVIDOR) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card p-4 border-0 shadow-sm bg-white h-100 card-hover" style="border-radius: 1.5rem;">
+                <h6 class="fw-bold text-muted small text-uppercase mb-3">Vendas do Mês</h6>
+                <h3 class="fw-bold text-dark mb-0">R$ <span id="val_mensal">{{ "%.2f"|format(venda_mensal|default(0)) }}</span></h3>
+                <div class="progress mt-3" style="height: 6px;"><div class="progress-bar bg-primary" style="width: 75%"></div></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card p-4 border-0 shadow-sm bg-white h-100 card-hover" style="border-radius: 1.5rem;">
+                <h6 class="fw-bold text-muted small text-uppercase mb-3">Vendas da Semana</h6>
+                <h3 class="fw-bold text-success mb-0">R$ <span id="val_semanal">{{ "%.2f"|format(venda_semanal|default(0)) }}</span></h3>
+                <div class="progress mt-3" style="height: 6px;"><div class="progress-bar bg-success" style="width: 45%"></div></div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card p-4 shadow-sm border-0 bg-dark text-white h-100" style="border-radius: 1.5rem;">
+                <div class="row g-3 text-center text-sm-start">
+                    <div class="col-sm-6 border-end-sm border-white border-opacity-10">
+                        <i class="bi bi-database-check text-success fs-3"></i>
+                        <span class="d-block fw-bold text-success small text-uppercase mt-1">MySQL Online</span>
+                    </div>
+                    <div class="col-sm-6 ps-sm-4">
+                        <i class="bi bi-cpu text-success fs-3"></i>
+                        <span class="d-block fw-bold text-success small text-uppercase mt-1">Engine Flask Ativa</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Card de Status do Servidor -->
-    <div class="col-md-8 mb-4">
-        <div class="card p-4 shadow-sm border-0 bg-dark text-white" style="border-radius: 15px;">
-            <h5>Status do Sistema</h5>
-            <div class="mt-3">
-                <p class="mb-1 opacity-75">
-                    <i class="bi bi-database-check text-success me-2"></i>
-                    Banco de Dados MySQL: <span class="text-success fw-bold">Conectado</span>
-                </p>
-                <p class="mb-0 opacity-75">
-                    <i class="bi bi-cpu text-success me-2"></i>
-                    Servidor Flask: <span class="text-success fw-bold">Ativo</span>
-                </p>
+    <!-- GRÁFICO E RANKING -->
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <div class="card p-4 shadow-sm border-0 h-100" style="border-radius: 1.5rem;">
+                <h6 class="fw-bold text-secondary text-uppercase small mb-4">Desempenho Semestral</h6>
+                <div style="height: 300px;"><canvas id="chartFaturamento"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 overflow-hidden" style="border-radius: 1.5rem;">
+                <div class="p-4 border-bottom bg-white fw-bold text-uppercase small">Itens Mais Vendidos</div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <tbody id="listaProdutos">
+                            {% for p in produtos_top %}
+                            <tr>
+                                <td class="ps-4 py-3 small fw-bold">{{ p.descricao }}</td>
+                                <td class="text-end pe-4"><span class="badge bg-primary-subtle text-primary">{{ p.qtd }} un</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Opcional: Card de estatísticas futuras -->
-<div class="row">
-    <div class="col-12">
-        <div class="alert alert-light border-0 shadow-sm p-4" style="border-radius: 15px;">
-            <h6 class="fw-bold"><i class="bi bi-info-circle me-2"></i> Dica do Dia</h6>
-            <p class="mb-0 text-muted">Lembre-se de conferir o estoque de peças antes de iniciar novas ordens de serviço complexas.</p>
-        </div>
-    </div>
-</div>
+<style>
+    .fw-black { font-weight: 900; }
+    .card-hover { transition: 0.3s; border: 1px solid transparent !important; }
+    .card-hover:hover { transform: translateY(-5px); border-color: #eee !important; box-shadow: 0 1rem 3rem rgba(0,0,0,.1) !important; }
+    
+    @media print {
+        .d-print-none, .sidebar, nav, .btn { display: none !important; }
+        .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        .card { box-shadow: none !important; border: 1px solid #eee !important; page-break-inside: avoid; }
+    }
+    @media (min-width: 576px) { .border-end-sm { border-right: 1px solid rgba(255,255,255,0.1); } }
+</style>
+
+<script src="https://cdn.jsdelivr.net"></script>
+<script>
+    // FUNÇÃO PARA ENVIAR RESUMO POR WHATSAPP
+    function enviarWhatsapp() {
+        const mensal = document.getElementById('val_mensal').innerText;
+        const semanal = document.getElementById('val_semanal').innerText;
+        const texto = `🛠️ *RESUMO DA OFICINA*\n\n💰 *Vendas Mês:* R$ ${mensal}\n📈 *Vendas Semana:* R$ ${semanal}\n\n_Enviado via Sistema Minha Oficina_`;
+        const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+        window.open(url, '_blank');
+    }
+
+    // GRÁFICO OTIMIZADO
+    const ctx = document.getElementById('chartFaturamento');
+    if (ctx) {        
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Faturamento',
+                    data: data,
+                    backgroundColor: '#0d6efd',
+                    borderRadius: 10,
+                    barThickness: 35
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } }, x: { grid: { display: false } } }
+            }
+        });
+    }
+</script>
 {% endblock %}

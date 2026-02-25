@@ -14,11 +14,13 @@
                 <div class="row">
                     <div class="col-md-6">
                         <p class="mb-1 text-muted small uppercase fw-bold">Cliente</p>
-                        <h5 class="fw-bold">{{ os.cliente_nome }}</h5>
+                        <!-- Ajuste 1: O nome vem do JOIN que fizemos na rota Python -->
+                        <h5 class="fw-bold">{{ os.cliente_nome or 'Não informado' }}</h5>
                     </div>
                     <div class="col-md-6 text-md-end">
                         <p class="mb-1 text-muted small uppercase fw-bold">Veículo</p>
-                        <h5 class="fw-bold">{{ os.veiculo_nome }} <span class="badge bg-secondary">{{ os.placa }}</span></h5>
+                        <!-- Ajuste 2: Mudado de veiculo_nome para veiculo_modelo (conforme seu banco) -->
+                        <h5 class="fw-bold">{{ os.veiculo_modelo }} <span class="badge bg-secondary">{{ os.placa }}</span></h5>
                     </div>
                     <hr class="my-3">
                     <div class="col-12">
@@ -30,9 +32,12 @@
         </div>
         <div class="col-md-4">
             <div class="card shadow-sm border-0 p-3 bg-dark text-white h-100 text-center justify-content-center">
-                <h6 class="text-uppercase opacity-75">Valor Total Acumulado</h6>
-                <h2 class="fw-bold text-success">R$ {{ "%.2f"|format(total) }}</h2>
-                <span class="badge {% if os.status == 'CONCLUÍDA' %}bg-success{% else %}bg-warning text-dark{% endif %} mt-2">
+                <h6 class="text-uppercase opacity-75">Valor Total Geral</h6>
+                <!-- Ajuste 3: Mudado para usar a coluna exata do banco -->
+                <h2 class="fw-bold text-success">R$ {{ "%.2f"|format(os.valor_total_geral) }}</h2>
+                
+                <!-- Ajuste 4: Removido o acento de 'CONCLUIDA' para bater com o ENUM do MySQL -->
+                <span class="badge {% if os.status == 'CONCLUIDA' %}bg-success{% else %}bg-warning text-dark{% endif %} mt-2">
                     STATUS: {{ os.status }}
                 </span>
             </div>
@@ -58,6 +63,8 @@
                                 <td>{{ "%.2f"|format(p.valor_unitario) }}</td>
                                 <td class="fw-bold">R$ {{ "%.2f"|format(p.quantidade * p.valor_unitario) }}</td>
                             </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">Nenhuma peça adicionada.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -83,6 +90,8 @@
                                 <td>{{ "%.2f"|format(s.valor_hora) }}</td>
                                 <td class="fw-bold">R$ {{ "%.2f"|format(s.horas * s.valor_hora) }}</td>
                             </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">Nenhum serviço registrado.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -92,29 +101,5 @@
     </div>
 </div>
 
-<!-- Modal Peça -->
-<div class="modal fade" id="modalPeca" tabindex="-1"><div class="modal-dialog"><form action="{{ url_for('add_item_os', os_id=os.id) }}" method="POST" class="modal-content">
-    <div class="modal-header"><h5>Adicionar Peça</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <label class="form-label">Descrição</label><input type="text" name="descricao" class="form-control mb-2" required>
-        <div class="row">
-            <div class="col"><label class="form-label">Quantidade</label><input type="number" name="quantidade" class="form-control" required></div>
-            <div class="col"><label class="form-label">Valor Unitário</label><input type="text" name="valor" class="form-control" placeholder="0.00" required></div>
-        </div>
-    </div>
-    <div class="modal-footer"><button type="submit" class="btn btn-success w-100">Salvar Peça</button></div>
-</form></div></div>
-
-<!-- Modal Serviço -->
-<div class="modal fade" id="modalServico" tabindex="-1"><div class="modal-dialog"><form action="{{ url_for('add_servico_os', os_id=os.id) }}" method="POST" class="modal-content">
-    <div class="modal-header"><h5>Registrar Mão de Obra</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <label class="form-label">Descrição do Serviço</label><input type="text" name="descricao" class="form-control mb-2" required>
-        <div class="row">
-            <div class="col"><label class="form-label">Horas/Qtd</label><input type="number" step="0.1" name="horas" class="form-control" required></div>
-            <div class="col"><label class="form-label">Valor por Hora</label><input type="text" name="valor" class="form-control" placeholder="0.00" required></div>
-        </div>
-    </div>
-    <div class="modal-footer"><button type="submit" class="btn btn-success w-100">Salvar Serviço</button></div>
-</form></div></div>
+<!-- MANTENHA SEUS MODAIS IGUAIS, ELES ESTÃO CORRETOS -->
 {% endblock %}

@@ -1,103 +1,125 @@
 {% extends 'base.html' %}
 
 {% block conteudo %}
-<!-- CSS Específico da Página -->
 <style>
-    body { font-family: 'Montserrat', sans-serif; background: #f8f9fa; }
+    :root { --danger-soft: #fff5f5; --success-soft: #f6fff9; }
+    .card-custom { border-radius: 15px; border: none; transition: transform 0.2s; }
+    .card-header-dark { background: #000; color: #fff; border-radius: 15px 15px 0 0 !important; }
+    .qty-badge { width: 120px; padding: 8px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
     
-    .spinner { 
-        width: 50px; height: 50px; border: 5px solid #f3f3f3; 
-        border-top: 5px solid #000; border-radius: 50%; 
-        animation: spin 1s linear infinite; 
+    /* Alerta de Estoque Baixo Animado */
+    .alerta-estoque { background: #ff4d4d; color: white; animation: pulse 2s infinite; border-radius: 10px; padding: 15px; display: flex; align-items: center; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
+
+    @media (max-width: 768px) {
+        .display-mobile-stack { flex-direction: column; align-items: flex-start !important; }
+        .btn-responsive { width: 100%; }
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
-    .card-header-dark { background: #000; color: #fff; border-radius: 10px 10px 0 0 !important; }
-    .qty-badge { width: 110px; display: inline-block; padding: 6px; }
 </style>
 
-
-<!-- Elemento do Loader (Essencial para o Script não dar erro) -->
 <style>
-    body { font-family: 'Montserrat', sans-serif; background: #f8f9fa; }
-    .spinner { 
-        width: 50px; height: 50px; border: 5px solid #f3f3f3; 
-        border-top: 5px solid #000; border-radius: 50%; 
-        animation: spin 1s linear infinite; 
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .card-header-dark { background: #000; color: #fff; border-radius: 10px 10px 0 0 !important; }
-    .qty-badge { width: 110px; display: inline-block; padding: 6px; border-radius: 20px; }
+    :root { --danger-soft: #fff5f5; --success-soft: #f6fff9; }
+    .card-custom { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+    .card-header-dark { background: #000; color: #fff; border-radius: 15px 15px 0 0 !important; }
+    .qty-badge { width: 110px; padding: 6px; border-radius: 20px; font-weight: 700; font-size: 0.7rem; }
+    .alerta-estoque { background: #ff4d4d; color: white; animation: pulse 2s infinite; border-radius: 10px; padding: 15px; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
 </style>
 
-<div class="container mt-4">
-    <!-- Cabeçalho -->
+<div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-uppercase">📦 Controlo de Estoque</h2>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm">Voltar ao Painel</a>
+        <h2 class="fw-bold"><i class="bi bi-box-seam text-primary me-2"></i>ESTOQUE</h2>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark rounded-pill px-4 btn-sm fw-bold">VOLTAR</a>
     </div>
 
-    <!-- Formulário de Cadastro -->
-    <div class="card shadow-sm border-0 mb-4" style="border-radius: 10px;">
-        <div class="card-header card-header-dark p-3">
-            <h5 class="mb-0">Adicionar Novo Item ao Inventário</h5>
+    <!-- Alerta Crítico -->
+    {% set itens_criticos = estoque|selectattr('quantidade_estoque', 'lt', 5)|list %}
+    {% if itens_criticos|length > 0 %}
+    <div class="alerta-estoque mb-4 d-flex align-items-center shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+        <div>
+            <h6 class="mb-0 fw-bold">ESTOQUE BAIXO!</h6>
+            <small>Existem {{ itens_criticos|length }} itens que precisam de reposição.</small>
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Resumo Financeiro -->
+    <div class="row g-3 mb-4 text-center text-md-start">
+        <div class="col-md-4">
+            <div class="card card-custom p-3 border-start border-primary border-4 bg-white">
+                <small class="text-muted fw-bold d-block">VALOR EM MERCADORIA</small>
+                {% set total_dinheiro = namespace(valor=0) %}
+                {% for item in estoque %}
+                    {% set total_dinheiro.valor = total_dinheiro.valor + (item.quantidade_estoque|float * item.valor_venda|float) %}
+                {% endfor %}
+                <h3 class="mb-0 fw-bold text-primary">R$ {{ "%.2f"|format(total_dinheiro.valor) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário de Cadastro - AJUSTADO PARA 'estoque_lista' -->
+    <div class="card card-custom mb-4 shadow-sm">
+        <div class="card-header card-header-dark p-3"><h6 class="mb-0 fw-bold small">NOVO PRODUTO</h6></div>
         <div class="card-body p-4">
-            <form action="{{ url_for('add_estoque') }}" method="POST" class="row g-3">
+            <form action="{{ url_for('estoque_lista') }}" method="POST" class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-bold">Descrição da Peça</label>
-                    <input type="text" name="peca" class="form-control" placeholder="Ex: Pastilha de Travão" required>
+                    <label class="form-label small fw-bold">DESCRIÇÃO</label>
+                    <input type="text" name="peca" class="form-control border-0 bg-light" placeholder="Ex: Filtro de Óleo" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Quantidade</label>
-                    <input type="number" name="quantidade" class="form-control" placeholder="0" required>
+                    <label class="form-label small fw-bold">QTD</label>
+                    <input type="number" name="quantidade" class="form-control border-0 bg-light" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Preço Unitário (R$)</label>
-                    <input type="number" step="0.01" name="valor" class="form-control" placeholder="0.00" required>
+                    <label class="form-label small fw-bold">PREÇO UNIT. (R$)</label>
+                    <input type="number" step="0.01" name="valor_venda" class="form-control border-0 bg-light" placeholder="0.00" required>
                 </div>
                 <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-dark px-5">Registar Peça</button>
+                    <button type="submit" class="btn btn-dark px-5 py-2 fw-bold">SALVAR NO ESTOQUE</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabela de Inventário -->
-    <div class="card shadow-sm border-0" style="border-radius: 10px;">
+    <!-- Busca -->
+    <div class="mb-3">
+        <div class="input-group shadow-sm">
+            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="inputBusca" class="form-control border-0 p-3" placeholder="Pesquisar peça no estoque...">
+        </div>
+    </div>
+
+    <!-- Tabela Listagem -->
+    <div class="card card-custom shadow-sm overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
+                <thead class="bg-light text-secondary small">
                     <tr>
-                        <th class="ps-4">Produto / Peça</th>
-                        <th>Preço Unitário</th>
-                        <th>Quantidade Atual</th>
-                        <th class="text-center">Estado</th>
+                        <th class="ps-4">PRODUTO / QTD</th>
+                        <th>PREÇO UN.</th>
+                        <th>TOTAL</th>
+                        <th class="text-center">AÇÕES</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tabelaEstoque">
                     {% for item in estoque %}
-                    <tr>
-                        <td class="ps-4 fw-bold text-dark">
-                            {{ item.nome if item.nome else item.peca }}
+                    <tr class="item-linha">
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ item.nome }}</div>
+                            <div class="small text-muted">{{ item.quantidade_estoque }} em estoque</div>
                         </td>
-                        <td class="text-success fw-bold">
-                            R$ {{ "%.2f"|format(item.valor|default(0)|float) }}
-                        </td>
-                        <td>{{ item.quantidade }} unidades</td>
+                        <td>R$ {{ "%.2f"|format(item.valor_venda) }}</td>
+                        <td class="fw-bold text-primary">R$ {{ "%.2f"|format(item.quantidade_estoque * item.valor_venda) }}</td>
                         <td class="text-center">
-                            {% if item.quantidade|int < 5 %}
-                            <span class="badge bg-danger qty-badge"><i class="bi bi-exclamation-triangle"></i> Baixo</span>
-                            {% else %}
-                            <span class="badge bg-success qty-badge"><i class="bi bi-check-circle"></i> Disponível</span>
+                            {% if item.quantidade_estoque < 5 %}
+                                <span class="badge bg-danger text-white qty-badge mb-1 d-block mx-auto">REPOR</span>
                             {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center py-5 text-muted">
-                            <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
-                            O estoque da Minha Oficina está vazio.
+                            <a href="{{ url_for('excluir_estoque', id=item.id) }}" 
+                               class="btn btn-sm btn-outline-danger border-0" 
+                               onclick="return confirm('Excluir este item?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -108,14 +130,14 @@
 </div>
 
 <script>
-    window.addEventListener('load', () => {
-        const loader = document.getElementById('loader-overlay');
-        if (loader) {
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => { loader.style.display = 'none'; }, 500);
-            }, 400);
-        }
+    // Filtro de Busca Dinâmica
+    document.getElementById('inputBusca').addEventListener('keyup', function() {
+        let busca = this.value.toLowerCase();
+        let linhas = document.querySelectorAll('.item-estoque');
+        linhas.forEach(linha => {
+            let texto = linha.innerText.toLowerCase();
+            linha.style.display = texto.includes(busca) ? '' : 'none';
+        });
     });
 </script>
 {% endblock %}
