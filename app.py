@@ -102,21 +102,16 @@ def gerenciar_os():
     
     try:
         if request.method == 'POST':
-            # Captura de dados do formulário
             cliente_id = request.form.get('cliente_id')
             veiculo_id = request.form.get('veiculo_id')
-            
-            # TRATAMENTO DO MECÂNICO: 
-            # Como seu HTML usa <input type="text" name="mecanico">, 
-            # se o seu banco espera um ID (INT), isso daria erro. 
-            # Se sua tabela 'servicos' aceita TEXTO no campo mecanico, use assim:
-            mecanico_nome = request.form.get('mecanico') 
-
             status = request.form.get('status', 'ABERTA')
             problema = request.form.get('problema')
             diagnostico = request.form.get('diagnostico')
             
-            # Valores (ajuste se tiver esses campos no modal)
+            # Se for salvar o nome do mecanico como texto, o banco deve ter essa coluna
+            # Se for ID, precisa mudar para mecanico_id no SQL abaixo
+            mecanico = request.form.get('mecanico') 
+
             v_peca = float(request.form.get('valor_peca') or 0)
             v_servico = float(request.form.get('valor_servico') or 0)
             v_total = v_peca + v_servico
@@ -134,13 +129,10 @@ def gerenciar_os():
             flash('OS aberta com sucesso!', 'success')
             return redirect(url_for('gerenciar_os'))
 
-        # --- BLOCO GET (LISTAGEM) ---
-        # Note que usei 'c_nome' e 'v_mod' para bater com seu HTML
+        # --- BLOCO GET ---
+        # Busca ordens com nomes de clientes e modelos de veículos
         query = """
-            SELECT s.*, 
-                   c.nome AS c_nome, 
-                   v.modelo AS v_mod, 
-                   v.placa
+            SELECT s.*, c.nome AS c_nome, v.modelo AS v_mod, v.placa
             FROM servicos s
             LEFT JOIN clientes c ON s.cliente_id = c.id
             LEFT JOIN veiculos v ON s.veiculo_id = v.id
@@ -149,10 +141,11 @@ def gerenciar_os():
         cursor.execute(query)
         ordens = cursor.fetchall()
 
-        cursor.execute("SELECT id, nome FROM clientes")
+        # Busca para os selects do Modal
+        cursor.execute("SELECT id, nome FROM clientes ORDER BY nome")
         clientes = cursor.fetchall()
 
-        cursor.execute("SELECT id, modelo, placa FROM veiculos")
+        cursor.execute("SELECT id, modelo, placa FROM veiculos ORDER BY modelo")
         veiculos = cursor.fetchall()
 
         return render_template('gerenciar_os.html', 
@@ -161,12 +154,14 @@ def gerenciar_os():
                                veiculos=veiculos)
 
     except Exception as e:
-        print(f"Erro: {e}")
-        flash(f"Erro ao processar: {e}", "danger")
+        print(f"Erro na Rota Servicos: {e}")
+        flash(f"Erro: {e}", "danger")
         return redirect(url_for('gerenciar_os'))
     finally:
         cursor.close()
         conexao.close()
+
+
   
 # 
 
@@ -472,37 +467,73 @@ def relatorios():
 
 #
 
-@app.route('/os/add_item/<int:os_id>', methods=['POST'])
+@app.route('/add_item_os/<int:os_id>', methods=['POST'])
 def add_item_os(os_id):
     conexao = conectar_banco()
-    cursor = conexao.cursor()
+    cursor = conexao.cursor(dictionary=True)
     try:
-        cursor.execute(
-            'INSERT INTO itens_os (os_id, descricao, quantidade, valor_unitario) VALUES (%s, %s, %s, %s)',
-            (os_id, request.form['descricao'], request.form['quantidade'], request.form['valor'].replace(',', '.'))
-        )
-        conexao.commit()
-        flash('Item adicionado!', 'success')
+        produto_id = request.form.get('produto_id')
+        quantidade = int(request.form.get('quantidade') or 1)
+
+        # 1. Busca os detalhes da peça no estoque
+        cursor.execute("SELECT nome, preco_venda FROM produtos WHERE id = %s", (produto_id,))
+        produto = cursor.fetchone()
+
+        if produto:
+            # 2. Insere a peça na tabela de itens da OS
+            sql_item = """
+                INSERT INTO itens_os (os_id, descricao, quantidade, valor_unitario) 
+                VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(sql_item, (os_id, produto['nome'], quantidade, produto['preco_venda']))
+            
+            # 3. Atualiza o Valor Total Geral da OS
+            valor_item = quantidade * float(produto['preco_venda'])
+            cursor.execute("UPDATE servicos SET valor_total_geral = valor_total_geral + %s WHERE id = %s", (valor_item, os_id))
+            
+            conexao.commit()
+            flash('Peça adicionada com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro ao adicionar peça: {e}', 'danger')
     finally:
         cursor.close()
         conexao.close()
     return redirect(url_for('detalhes_os', id=os_id))
 
 @app.route('/os/add_servico/<int:os_id>', methods=['POST'])
-def add_servico_os(os_id):
+def adicionar_servico_detalhado(os_id): # Nome alterado para evitar o AssertionError
     conexao = conectar_banco()
     cursor = conexao.cursor()
     try:
-        cursor.execute(
-            'INSERT INTO servicos_os (os_id, descricao, horas, valor_hora) VALUES (%s, %s, %s, %s)',
-            (os_id, request.form['descricao'], request.form['horas'], request.form['valor'].replace(',', '.'))
-        )
+        # 1. Captura os dados do formulário
+        descricao = request.form.get('descricao')
+        horas = float(request.form.get('horas') or 1)
+        # Trata a vírgula caso o usuário digite 10,50
+        valor_raw = request.form.get('valor', '0').replace(',', '.')
+        valor_hora = float(valor_raw)
+        
+        # 2. Insere na tabela de serviços detalhados
+        # Certifique-se que o nome da tabela no banco é 'servicos_detalhados'
+        sql_insert = "INSERT INTO servicos_detalhados (os_id, descricao, horas, valor_hora) VALUES (%s, %s, %s, %s)"
+        cursor.execute(sql_insert, (os_id, descricao, horas, valor_hora))
+        
+        # 3. ATUALIZA O TOTAL DA OS (Soma o novo serviço ao valor_total_geral)
+        subtotal = horas * valor_hora
+        sql_update_total = "UPDATE servicos SET valor_total_geral = valor_total_geral + %s WHERE id = %s"
+        cursor.execute(sql_update_total, (subtotal, os_id))
+        
         conexao.commit()
-        flash('Serviço adicionado!', 'success')
+        flash('Serviço adicionado com sucesso!', 'success')
+        
+    except Exception as e:
+        print(f"Erro ao adicionar serviço: {e}")
+        flash(f'Erro ao adicionar serviço: {e}', 'danger')
     finally:
         cursor.close()
         conexao.close()
+        
     return redirect(url_for('detalhes_os', id=os_id))
+
 
 # Exemplo de como deve ficar sua rota de detalhes corrigida:
 @app.route('/detalhes_os/<int:id>')
@@ -510,31 +541,26 @@ def detalhes_os(id):
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
     try:
-        # Busca os dados da OS unindo com as tabelas de Clientes e Veículos
-        sql = """
-            SELECT s.*, c.nome AS cliente_nome, v.modelo AS veiculo_nome, v.placa 
-            FROM servicos s
-            LEFT JOIN clientes c ON s.cliente_id = c.id
-            LEFT JOIN veiculos v ON s.veiculo_id = v.id
-            WHERE s.id = %s
-        """
-        cursor.execute(sql, (id,))
+        # Busca a OS
+        cursor.execute("SELECT s.*, c.nome as cliente_nome, v.modelo as veiculo_modelo, v.placa FROM servicos s JOIN clientes c ON s.cliente_id = c.id JOIN veiculos v ON s.veiculo_id = v.id WHERE s.id = %s", (id,))
         os_data = cursor.fetchone()
 
-        if not os_data:
-            flash('Ordem de Serviço não encontrada.', 'danger')
-            return redirect(url_for('gerenciar_os'))
+        # Busca ITENS PARA O MODAL (Puxando das tabelas que criamos acima)
+        cursor.execute("SELECT * FROM produtos ORDER BY nome")
+        produtos = cursor.fetchall()
 
-        # NOTA: Se você ainda não criou as tabelas de itens, 
-        # enviamos listas vazias para o HTML não quebrar no 'for'
+        cursor.execute("SELECT * FROM servicos_lista ORDER BY nome")
+        servicos_base = cursor.fetchall()
+
+        # Busca itens JÁ LANÇADOS nesta OS para mostrar na tabela da página
+        cursor.execute("SELECT * FROM itens_os WHERE os_id = %s", (id,))
+        pecas_na_os = cursor.fetchall()
+
         return render_template('detalhes_os.html', 
                                os=os_data, 
-                               total=os_data['valor_total_geral'], 
-                               pecas=[], 
-                               servicos=[]) 
-    except Exception as e:
-        print(f"Erro ao carregar OS: {e}")
-        return redirect(url_for('gerenciar_os'))
+                               produtos_estoque=produtos, 
+                               servicos_base=servicos_base,
+                               pecas=pecas_na_os)
     finally:
         cursor.close()
         conexao.close()
@@ -664,6 +690,38 @@ def excluir_estoque(id): # Nome único 2
         conexao.close()
     return redirect(url_for('estoque'))
 
+@app.route('/add_servico_os/<int:os_id>', methods=['POST'])
+def add_servico_os(os_id):
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    try:
+        servico_id = request.form.get('servico_id')
+        horas = float(request.form.get('horas') or 1)
+
+        # 1. Busca os detalhes do serviço na lista base
+        cursor.execute("SELECT nome, preco FROM servicos_lista WHERE id = %s", (servico_id,))
+        servico = cursor.fetchone()
+
+        if servico:
+            # 2. Insere o serviço na tabela de serviços detalhados da OS
+            sql_serv = """
+                INSERT INTO servicos_detalhados (os_id, descricao, horas, valor_hora) 
+                VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(sql_serv, (os_id, servico['nome'], horas, servico['preco']))
+            
+            # 3. Atualiza o Valor Total Geral da OS
+            valor_servico = horas * float(servico['preco'])
+            cursor.execute("UPDATE servicos SET valor_total_geral = valor_total_geral + %s WHERE id = %s", (valor_servico, os_id))
+            
+            conexao.commit()
+            flash('Serviço registrado com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro ao registrar serviço: {e}', 'danger')
+    finally:
+        cursor.close()
+        conexao.close()
+    return redirect(url_for('detalhes_os', id=os_id))
 
 
 
